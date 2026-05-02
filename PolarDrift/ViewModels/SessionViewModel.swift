@@ -104,7 +104,12 @@ final class SessionViewModel<Speech: SpeechManaging> {
         Task { @CameraActor in
             let stream = self.cameraManager.makeGrayImageStream()
             await MainActor.run {
-                self.calibrationVM.startStream(stream, step: $this.step, calibration: $this.calibration)
+                self.calibrationVM.startStream(
+                    stream,
+                    step: $this.step,
+                    calibration: $this.calibration,
+                    speech: self.speech
+                )
             }
         }
     }

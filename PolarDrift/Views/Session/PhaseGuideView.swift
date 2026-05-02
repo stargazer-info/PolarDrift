@@ -2,7 +2,7 @@ import SwiftUI
 
 struct PhaseGuideView: View {
     let phase: AlignmentPhase
-    let onStart: () -> Void
+    @Binding var step: SessionStep
 
     @Environment(SpeechRecognitionManager.self) private var speech
 
@@ -48,7 +48,10 @@ struct PhaseGuideView: View {
         }
         .task {
             for await command in speech.makeCommandStream() {
-                if case .start = command { onStart() }
+                if case .start = command {
+                    speech.stopListening()
+                    step = .calibration(.detectingCentroid)
+                }
             }
         }
     }

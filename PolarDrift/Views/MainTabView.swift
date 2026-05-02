@@ -14,5 +14,9 @@ struct MainTabView: View {
                 }
         }
         .tint(Color.astronomyAccent)
+        #if os(iOS)
+        .onAppear { UIApplication.shared.isIdleTimerDisabled = true }
+        .onDisappear { UIApplication.shared.isIdleTimerDisabled = false }
+        #endif
     }
 }

@@ -17,16 +17,20 @@ final class CalibrationViewModel {
 
     // MARK: - フレームストリーム開始・停止
 
-    func startStream(
+    func startStream<Speech: SpeechManaging>(
         _ stream: AsyncStream<GrayImage>,
         step: Binding<SessionStep>,
-        calibration: Binding<DecCalibration?>
+        calibration: Binding<DecCalibration?>,
+        speech: Speech
     ) {
         streamTask?.cancel()
         streamTask = Task {
-            // 遷移アニメーション（0.35秒）完了後に検出開始
-            // 「星を検出しています…」が確実に表示されるようにする
+            // 遷移アニメーション完了後に検出開始（「星を検出しています…」を確実に表示）
             try? await Task.sleep(for: .milliseconds(400))
+            // PhaseGuideViewから直接.detectingCentroidに遷移した場合、タイムアウトを自動開始
+            if case .calibration(.detectingCentroid) = step.wrappedValue {
+                startDetectionTimeout(step: step, speech: speech)
+            }
             for await gray in stream {
                 processFrame(gray, step: step, calibration: calibration)
             }

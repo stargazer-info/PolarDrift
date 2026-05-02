@@ -22,20 +22,9 @@ struct SessionView: View {
             Group {
                 switch session.step {
                 case .phaseGuide(let phase):
-                    PhaseGuideView(
-                        phase: phase,
-                        onStart: {
-                            @Bindable var s = session
-                            session.step = .calibration(.waitingForVoice)
-                            session.calibrationVM.handleVoiceCommand(
-                                step: $s.step,
-                                calibration: $s.calibration,
-                                speech: speech
-                            )
-                        }
-                    )
-                    .transition(.asymmetric(insertion: .move(edge: .trailing),
-                                            removal: .move(edge: .leading)))
+                    PhaseGuideView(phase: phase, step: $session.step)
+                        .transition(.asymmetric(insertion: .move(edge: .trailing),
+                                                removal: .move(edge: .leading)))
 
                 case .calibration:
                     CalibrationView(
