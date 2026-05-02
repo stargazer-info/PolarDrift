@@ -9,9 +9,13 @@ import SwiftUI
 
 @main
 struct PolarDriftApp: App {
+    @State private var sessionVM = SessionViewModel()
+
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            MainTabView()
+                .environment(sessionVM)
+                .preferredColorScheme(.dark)
         }
     }
 }
