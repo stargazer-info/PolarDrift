@@ -17,7 +17,7 @@ struct DriftMeasureView<Speech: SpeechManaging>: View {
                 calibration: calibration,
                 driftHistory: [],
                 isTracking: tracker.isTracking,
-                showCrosshair: isMeasuring,
+                showCrosshair: showDriftCrosshair,
                 crosshairFollowsStar: false
             )
             .ignoresSafeArea()
@@ -56,6 +56,13 @@ struct DriftMeasureView<Speech: SpeechManaging>: View {
     private var isMeasuring: Bool {
         guard case .driftMeasure(.measuring) = step else { return false }
         return true
+    }
+
+    private var showDriftCrosshair: Bool {
+        switch step {
+        case .driftMeasure(.measuring), .driftMeasure(.showingResult): return true
+        default: return false
+        }
     }
 
     // MARK: - Sub-views
