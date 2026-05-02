@@ -132,6 +132,7 @@ final class CalibrationViewModel {
         let dist = sqrt(disp.dx * disp.dx + disp.dy * disp.dy)
         guard dist >= decMoveThreshold else { return }
         guard let cal = DecCalibration.from(origin: origin, moved: pos) else { return }
+        calibration.wrappedValue = cal
         step.wrappedValue = .calibration(.complete(cal))
     }
 
