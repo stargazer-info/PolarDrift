@@ -1,7 +1,8 @@
 import SwiftUI
 
 struct SessionView: View {
-    @Environment(SessionViewModel.self) var session
+    @Environment(AppSessionViewModel.self) var session
+    @Environment(SpeechRecognitionManager.self) var speech
 
     var body: some View {
         @Bindable var session = session
@@ -21,18 +22,27 @@ struct SessionView: View {
             Group {
                 switch session.step {
                 case .phaseGuide(let phase):
-                    PhaseGuideView(phase: phase)
-                        .transition(.asymmetric(insertion: .move(edge: .trailing),
-                                                removal: .move(edge: .leading)))
+                    PhaseGuideView(
+                        phase: phase,
+                        onStart: {
+                            @Bindable var s = session
+                            session.step = .calibration(.waitingForVoice)
+                            session.calibrationVM.handleVoiceCommand(
+                                step: $s.step,
+                                calibration: $s.calibration,
+                                speech: speech
+                            )
+                        }
+                    )
+                    .transition(.asymmetric(insertion: .move(edge: .trailing),
+                                            removal: .move(edge: .leading)))
 
                 case .calibration:
                     CalibrationView(
                         vm: session.calibrationVM,
                         step: $session.step,
                         calibration: $session.calibration,
-                        isListening: session.speechRecognition.isListening,
-                        startListening: { session.speechRecognition.startListening() },
-                        stopListening:  { session.speechRecognition.stopListening() }
+                        speech: speech
                     )
                     .transition(.asymmetric(insertion: .move(edge: .trailing),
                                             removal: .move(edge: .leading)))
@@ -45,9 +55,7 @@ struct SessionView: View {
                         step: $session.step,
                         currentPhase: $session.currentPhase,
                         calibration: $session.calibration,
-                        isListening: session.speechRecognition.isListening,
-                        startListening: { session.speechRecognition.startListening() },
-                        stopListening:  { session.speechRecognition.stopListening() }
+                        speech: speech
                     )
                     .transition(.asymmetric(insertion: .move(edge: .trailing),
                                             removal: .move(edge: .leading)))

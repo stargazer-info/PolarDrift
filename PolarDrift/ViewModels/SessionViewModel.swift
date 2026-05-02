@@ -37,9 +37,13 @@ enum SessionStep {
 }
 
 // MARK: - SessionViewModel
+// アプリ全体で使用する具体型エイリアス
+typealias AppSessionViewModel = SessionViewModel<SpeechRecognitionManager>
+
+
 
 @Observable
-final class SessionViewModel {
+final class SessionViewModel<Speech: SpeechManaging> {
 
     // MARK: - 共有状態
     var step: SessionStep = .phaseGuide(.azimuth)
@@ -49,7 +53,7 @@ final class SessionViewModel {
 
     // MARK: - インフラ
     let cameraManager = CameraManager()
-    let speechRecognition = SpeechRecognitionManager()
+    let speech: Speech
 
     var cameraISO: Float = 800 {
         didSet { Task { @CameraActor in await self.cameraManager.setExposure(denominator: self.cameraShutterDenominator, iso: self.cameraISO) } }
@@ -68,17 +72,21 @@ final class SessionViewModel {
     let calibrationVM  = CalibrationViewModel()
     let driftMeasureVM = DriftMeasureViewModel()
 
+    init(speech: Speech) {
+        self.speech = speech
+        driftMeasureVM.onSessionComplete = { [weak self] in self?.speech.stopListening() }
+    }
+
     // MARK: - セットアップ
 
     func setup() async {
-        await speechRecognition.requestPermissions()
+        await speech.requestPermissions()
         let layer = await Task { @CameraActor in
             self.cameraManager.setup()
             self.cameraManager.start()
             return self.cameraManager.previewLayer
         }.value
         previewLayer = layer
-        speechRecognition.onStartCommand = { [weak self] in self?.handleVoiceCommand() }
         startSession()
     }
 
@@ -86,39 +94,7 @@ final class SessionViewModel {
         currentPhase = .azimuth
         calibration = nil
         step = .phaseGuide(.azimuth)
-        speechRecognition.startListening()
-    }
-
-    // MARK: - 音声コマンドルーティング
-
-    func handleVoiceCommand() {
-        @Bindable var this = self
-
-        switch step {
-        case .phaseGuide:
-            // .waitingForVoice を経由せず直接 calibrationVM に処理させる
-            step = .calibration(.waitingForVoice)
-            fallthrough
-
-        case .calibration:
-            calibrationVM.handleVoiceCommand(
-                step: $this.step,
-                calibration: $this.calibration,
-                startListening: { [weak self] in self?.speechRecognition.startListening() },
-                stopListening:  { [weak self] in self?.speechRecognition.stopListening() }
-            )
-
-        case .driftMeasure:
-            driftMeasureVM.handleVoiceCommand(
-                step: $this.step,
-                calibration: $this.calibration,
-                currentPhase: $this.currentPhase,
-                startListening: { [weak self] in self?.speechRecognition.startListening() }
-            )
-
-        default:
-            break
-        }
+        speech.startListening()
     }
 
     // MARK: - ストリーム開始（SessionView の onAppear から呼ばれる）
@@ -142,7 +118,8 @@ final class SessionViewModel {
                     stream,
                     step: $this.step,
                     calibration: $this.calibration,
-                    currentPhase: $this.currentPhase
+                    currentPhase: $this.currentPhase,
+                    speech: self.speech
                 )
             }
         }

@@ -2,7 +2,9 @@ import SwiftUI
 
 struct PhaseGuideView: View {
     let phase: AlignmentPhase
-    @Environment(SessionViewModel.self) var vm
+    let onStart: () -> Void
+
+    @Environment(SpeechRecognitionManager.self) private var speech
 
     var body: some View {
         VStack(spacing: 32) {
@@ -41,8 +43,13 @@ struct PhaseGuideView: View {
 
             Spacer()
 
-            VoiceStatusBadge(isListening: vm.speechRecognition.isListening)
+            VoiceStatusBadge(isListening: speech.isListening)
                 .padding(.bottom, 48)
+        }
+        .task {
+            for await command in speech.makeCommandStream() {
+                if case .start = command { onStart() }
+            }
         }
     }
 }

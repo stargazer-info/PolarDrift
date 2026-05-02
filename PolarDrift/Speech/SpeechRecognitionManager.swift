@@ -2,15 +2,19 @@ import Speech
 import AVFoundation
 import Observation
 
+enum SpeechCommand {
+    case start
+}
+
 @Observable
-final class SpeechRecognitionManager: NSObject {
-    var isListening = false
-    var onStartCommand: (() -> Void)?
+final class SpeechRecognitionManager: NSObject, SpeechManaging {
+    private(set) var isListening = false
 
     private let speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: "ja-JP"))
     private let audioEngine = AVAudioEngine()
     private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
     private var recognitionTask: SFSpeechRecognitionTask?
+    private var commandContinuation: AsyncStream<SpeechCommand>.Continuation?
 
     func requestPermissions() async -> Bool {
         let speech = await withCheckedContinuation { cont in
@@ -19,13 +23,22 @@ final class SpeechRecognitionManager: NSObject {
             }
         }
         guard speech else { return false }
-
         #if os(iOS)
-        let mic = await AVAudioApplication.requestRecordPermission()
-        return mic
+        return await AVAudioApplication.requestRecordPermission()
         #else
         return true
         #endif
+    }
+
+    /// 呼び出すたびに前のストリームを終了し新しいストリームを返す
+    func makeCommandStream() -> AsyncStream<SpeechCommand> {
+        commandContinuation?.finish()
+        return AsyncStream { [weak self] continuation in
+            self?.commandContinuation = continuation
+            continuation.onTermination = { [weak self] _ in
+                self?.commandContinuation = nil
+            }
+        }
     }
 
     func startListening() {
@@ -39,13 +52,9 @@ final class SpeechRecognitionManager: NSObject {
 
         let inputNode = audioEngine.inputNode
         let format = inputNode.outputFormat(forBus: 0)
-        
-        // Validate format before installing tap
-        guard format.sampleRate > 0, format.channelCount > 0 else {
-            print("Invalid audio format: sampleRate=\(format.sampleRate), channelCount=\(format.channelCount)")
-            return
-        }
-        
+
+        guard format.sampleRate > 0, format.channelCount > 0 else { return }
+
         inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
             self?.recognitionRequest?.append(buffer)
         }
@@ -55,8 +64,7 @@ final class SpeechRecognitionManager: NSObject {
             let transcript = result.bestTranscription.formattedString
             if transcript.contains("スタート") || transcript.contains("start") || transcript.contains("START") {
                 Task { @MainActor [weak self] in
-                    self?.onStartCommand?()
-                    // コマンド検出後にリセット（連続検出を防ぐ）
+                    self?.commandContinuation?.yield(.start)
                     self?.restartRecognition()
                 }
             }
@@ -82,7 +90,6 @@ final class SpeechRecognitionManager: NSObject {
 
     private func restartRecognition() {
         stopListening()
-        // 短い遅延後に再開（同じ発話の重複検出を防ぐ）
         Task {
             try? await Task.sleep(for: .seconds(1.5))
             startListening()

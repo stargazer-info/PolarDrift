@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct SessionCompleteView: View {
-    @Environment(SessionViewModel.self) var vm
+    @Environment(AppSessionViewModel.self) var vm
 
     var body: some View {
         VStack(spacing: 32) {

@@ -40,31 +40,30 @@ final class CalibrationViewModel {
 
     // MARK: - 音声コマンド処理
 
-    func handleVoiceCommand(
+    func handleVoiceCommand<Speech: SpeechManaging>(
         step: Binding<SessionStep>,
         calibration: Binding<DecCalibration?>,
-        startListening: @escaping () -> Void,
-        stopListening: () -> Void
+        speech: Speech
     ) {
         guard case .calibration(let calStep) = step.wrappedValue else { return }
         switch calStep {
         case .waitingForVoice:
             detectionFailed = false
-            stopListening()
+            speech.stopListening()
             step.wrappedValue = .calibration(.detectingCentroid)
-            startDetectionTimeout(step: step, startListening: startListening)
+            startDetectionTimeout(step: step, speech: speech)
 
         case .detectingCentroid:
             cancelDetectionTimeout()
             detectedCentroid = nil
             detectionFailed = false
             step.wrappedValue = .calibration(.detectingCentroid)
-            startDetectionTimeout(step: step, startListening: startListening)
+            startDetectionTimeout(step: step, speech: speech)
 
         case .complete(let cal):
             calibration.wrappedValue = cal
             step.wrappedValue = .driftMeasure(.reintroducing(iteration: 1))
-            startListening()
+            speech.startListening()
 
         default:
             break
@@ -134,9 +133,9 @@ final class CalibrationViewModel {
 
     // MARK: - 検出タイムアウト
 
-    private func startDetectionTimeout(
+    private func startDetectionTimeout<Speech: SpeechManaging>(
         step: Binding<SessionStep>,
-        startListening: @escaping () -> Void
+        speech: Speech
     ) {
         detectionTimeoutTask = Task {
             try? await Task.sleep(for: .seconds(5))
@@ -145,7 +144,7 @@ final class CalibrationViewModel {
                 detectedCentroid = nil
                 detectionFailed = true
                 step.wrappedValue = .calibration(.waitingForVoice)
-                startListening()
+                speech.startListening()
             }
         }
     }

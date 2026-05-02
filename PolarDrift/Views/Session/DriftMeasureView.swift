@@ -1,13 +1,11 @@
 import SwiftUI
 
-struct DriftMeasureView: View {
+struct DriftMeasureView<Speech: SpeechManaging>: View {
     let vm: DriftMeasureViewModel
     @Binding var step: SessionStep
     @Binding var currentPhase: AlignmentPhase
     @Binding var calibration: DecCalibration?
-    let isListening: Bool
-    let startListening: () -> Void
-    let stopListening: () -> Void
+    let speech: Speech
 
     private var tracker: DriftTracker { vm.driftTracker }
 
@@ -39,6 +37,18 @@ struct DriftMeasureView: View {
                 bottomBar
                     .padding(.horizontal, 16)
                     .padding(.bottom, 48)
+            }
+        }
+        .task {
+            for await command in speech.makeCommandStream() {
+                if case .start = command {
+                    vm.handleVoiceCommand(
+                        step: $step,
+                        calibration: $calibration,
+                        currentPhase: $currentPhase,
+                        speech: speech
+                    )
+                }
             }
         }
     }
@@ -123,7 +133,7 @@ struct DriftMeasureView: View {
             default:
                 EmptyView()
             }
-            VoiceStatusBadge(isListening: isListening)
+            VoiceStatusBadge(isListening: speech.isListening)
         }
     }
 
