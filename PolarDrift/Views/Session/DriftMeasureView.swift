@@ -1,4 +1,5 @@
 import SwiftUI
+import AVFoundation
 
 struct DriftMeasureView: View {
     let vm: DriftMeasureViewModel
@@ -6,6 +7,7 @@ struct DriftMeasureView: View {
     @Binding var currentPhase: AlignmentPhase
     @Binding var calibration: DecCalibration?
     let isListening: Bool
+    let previewLayer: AVCaptureVideoPreviewLayer?
 
     private var tracker: DriftTracker { vm.driftTracker }
 
@@ -18,7 +20,8 @@ struct DriftMeasureView: View {
                 driftHistory: [],
                 isTracking: tracker.isTracking,
                 showCrosshair: showDriftCrosshair,
-                crosshairFollowsStar: false
+                crosshairFollowsStar: false,
+                previewLayer: previewLayer
             )
             .ignoresSafeArea()
 

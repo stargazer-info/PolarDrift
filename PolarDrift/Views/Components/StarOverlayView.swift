@@ -9,8 +9,7 @@ struct StarOverlayView: View {
     let isTracking: Bool
     let showCrosshair: Bool              // false=非表示、true=表示（十字線）
     let crosshairFollowsStar: Bool       // true=星追随（キャリブ後）、false=固定（測定中）
-
-    @Environment(AppSessionViewModel.self) private var session
+    let previewLayer: AVCaptureVideoPreviewLayer?
 
     var body: some View {
         GeometryReader { geo in
@@ -59,7 +58,7 @@ struct StarOverlayView: View {
     }
 
     private func denormalized(_ pt: CGPoint, _ size: CGSize) -> CGPoint {
-        if let layer = session.previewLayer {
+        if let layer = previewLayer {
             return layer.layerPointConverted(fromCaptureDevicePoint: pt)
         }
         return CGPoint(x: pt.x * size.width, y: pt.y * size.height)

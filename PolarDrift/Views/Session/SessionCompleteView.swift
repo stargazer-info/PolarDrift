@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct SessionCompleteView: View {
-    @Environment(AppSessionViewModel.self) var vm
+    @Binding var shouldStartSession: Bool
 
     var body: some View {
         VStack(spacing: 32) {
@@ -24,7 +24,7 @@ struct SessionCompleteView: View {
             Spacer()
 
             Button("新しいセッションを開始") {
-                vm.startSession()
+                shouldStartSession = true
             }
             .buttonStyle(.borderedProminent)
             .tint(Color.astronomyAccent)

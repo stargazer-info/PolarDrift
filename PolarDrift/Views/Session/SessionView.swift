@@ -1,17 +1,16 @@
 import SwiftUI
 
 struct SessionView: View {
-    @State private var speech: SpeechRecognitionManager
-    @State private var sessionVM: AppSessionViewModel
+    @State private var viewModel: SessionViewModel<SpeechRecognitionManager>
+    @State private var shouldStartNewSession = false
 
     init() {
         let s = SpeechRecognitionManager()
-        _speech    = State(initialValue: s)
-        _sessionVM = State(initialValue: AppSessionViewModel(speech: s))
+        _viewModel = State(initialValue: SessionViewModel(speech: s))
     }
 
     var body: some View {
-        @Bindable var session = sessionVM
+        @Bindable var session = viewModel
 
         ZStack {
             #if os(iOS)
@@ -29,7 +28,7 @@ struct SessionView: View {
                 switch session.step {
                 case .phaseGuide(let phase):
                     PhaseGuideView(phase: phase, step: $session.step,
-                                   isListening: speech.isListening)
+                                   isListening: viewModel.speech.isListening)
                         .transition(.asymmetric(insertion: .move(edge: .trailing),
                                                 removal: .move(edge: .leading)))
 
@@ -38,7 +37,8 @@ struct SessionView: View {
                         vm: session.calibrationVM,
                         step: $session.step,
                         calibration: $session.calibration,
-                        isListening: speech.isListening
+                        isListening: viewModel.speech.isListening,
+                        previewLayer: viewModel.previewLayer
                     )
                     .transition(.asymmetric(insertion: .move(edge: .trailing),
                                             removal: .move(edge: .leading)))
@@ -51,7 +51,8 @@ struct SessionView: View {
                         step: $session.step,
                         currentPhase: $session.currentPhase,
                         calibration: $session.calibration,
-                        isListening: speech.isListening
+                        isListening: viewModel.speech.isListening,
+                        previewLayer: viewModel.previewLayer
                     )
                     .transition(.asymmetric(insertion: .move(edge: .trailing),
                                             removal: .move(edge: .leading)))
@@ -63,28 +64,34 @@ struct SessionView: View {
                         .transition(.opacity)
 
                 case .sessionComplete:
-                    SessionCompleteView()
+                    SessionCompleteView(shouldStartSession: $shouldStartNewSession)
                         .transition(.opacity)
                 }
             }
             .animation(.easeInOut(duration: 0.35), value: stepID)
         }
-        .environment(sessionVM)
-        .task { await sessionVM.setup() }
-        .onChange(of: speech.commandCount) {
-            sessionVM.handleVoiceCommand(speech.lastCommand)
+        .environment(viewModel)
+        .task { await viewModel.setup() }
+        .onChange(of: viewModel.speech.commandCount) {
+            viewModel.handleVoiceCommand(viewModel.speech.lastCommand)
+        }
+        .onChange(of: shouldStartNewSession) { _, newValue in
+            if newValue {
+                viewModel.startSession()
+                shouldStartNewSession = false
+            }
         }
     }
 
     private var needsDimOverlay: Bool {
-        switch sessionVM.step {
+        switch viewModel.step {
         case .calibration, .driftMeasure: return false
         default: return true
         }
     }
 
     private var stepID: Int {
-        switch sessionVM.step {
+        switch viewModel.step {
         case .phaseGuide:      return 0
         case .calibration:     return 1
         case .driftMeasure:    return 2

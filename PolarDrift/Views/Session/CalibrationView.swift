@@ -1,10 +1,12 @@
 import SwiftUI
+import AVFoundation
 
 struct CalibrationView: View {
     let vm: CalibrationViewModel
     @Binding var step: SessionStep
     @Binding var calibration: DecCalibration?
     let isListening: Bool
+    let previewLayer: AVCaptureVideoPreviewLayer?
 
     var body: some View {
         @Bindable var vm = vm
@@ -17,7 +19,8 @@ struct CalibrationView: View {
                 driftHistory: [],
                 isTracking: false,
                 showCrosshair: isDecAxisKnown,
-                crosshairFollowsStar: true
+                crosshairFollowsStar: true,
+                previewLayer: previewLayer
             )
             .ignoresSafeArea()
 

@@ -37,10 +37,6 @@ enum SessionStep {
 }
 
 // MARK: - SessionViewModel
-// アプリ全体で使用する具体型エイリアス
-typealias AppSessionViewModel = SessionViewModel<SpeechRecognitionManager>
-
-
 
 @Observable
 final class SessionViewModel<Speech: SpeechManaging> {
