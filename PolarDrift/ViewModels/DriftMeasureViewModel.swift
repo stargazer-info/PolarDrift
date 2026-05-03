@@ -88,7 +88,14 @@ final class DriftMeasureViewModel {
     ) {
         switch step.wrappedValue {
         case .driftMeasure(.reintroducing):
-            detectedCentroid = frameProcessor.detectInitialCentroid(in: gray)
+            if let last = detectedCentroid {
+                detectedCentroid = frameProcessor.trackCentroid(
+                    in: gray, lastPosition: last,
+                    predictedVelocity: .zero, searchRadius: 60
+                ) ?? frameProcessor.detectInitialCentroid(in: gray)
+            } else {
+                detectedCentroid = frameProcessor.detectInitialCentroid(in: gray)
+            }
 
         case .driftMeasure(.measuring):
             handleDriftMeasurement(gray, step: step, calibration: calibration, currentPhase: currentPhase)

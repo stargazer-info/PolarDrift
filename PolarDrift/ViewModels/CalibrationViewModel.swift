@@ -11,7 +11,7 @@ final class CalibrationViewModel {
 
     private var calibrationOrigin: CGPoint?
     private var calibLastPos: CGPoint?
-    private let decMoveThreshold: CGFloat = 0.03
+    private let decMoveThreshold: CGFloat = 0.10
     private var detectionTimeoutTask: Task<Void, Never>?
     private var streamTask: Task<Void, Never>?
 
@@ -61,10 +61,6 @@ final class CalibrationViewModel {
             step.wrappedValue = .calibration(.detectingCentroid)
             startDetectionTimeout(step: step)
 
-        case .complete(let cal):
-            calibration.wrappedValue = cal
-            step.wrappedValue = .driftMeasure(.reintroducing(iteration: 1))
-
         default:
             break
         }
@@ -83,13 +79,6 @@ final class CalibrationViewModel {
 
         case .calibration(.awaitingDecMove(let origin)):
             handleDecAxisDetection(gray, origin: origin, step: step, calibration: calibration)
-
-        case .calibration(.complete):
-            guard let last = detectedCentroid else { return }
-            if let pos = frameProcessor.trackCentroid(
-                in: gray, lastPosition: last,
-                predictedVelocity: .zero, searchRadius: 15
-            ) { detectedCentroid = pos }
 
         default:
             break
@@ -129,7 +118,7 @@ final class CalibrationViewModel {
         guard dist >= decMoveThreshold else { return }
         guard let cal = DecCalibration.from(origin: origin, moved: pos) else { return }
         calibration.wrappedValue = cal
-        step.wrappedValue = .calibration(.complete(cal))
+        step.wrappedValue = .driftMeasure(.reintroducing(iteration: 1))
     }
 
     // MARK: - 検出タイムアウト

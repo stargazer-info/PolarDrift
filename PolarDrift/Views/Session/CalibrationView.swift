@@ -18,7 +18,7 @@ struct CalibrationView: View {
                 calibration: calibration,
                 driftHistory: [],
                 isTracking: false,
-                showCrosshair: isDecAxisKnown,
+                showCrosshair: false,
                 crosshairFollowsStar: true,
                 previewLayer: previewLayer
             )
@@ -41,11 +41,6 @@ struct CalibrationView: View {
 
     private var isDetecting: Bool {
         guard case .calibration(.detectingCentroid) = step else { return false }
-        return true
-    }
-
-    private var isDecAxisKnown: Bool {
-        guard case .calibration(.complete) = step else { return false }
         return true
     }
 
@@ -83,15 +78,6 @@ struct CalibrationView: View {
                     .font(.phaseTitle).foregroundStyle(.yellow)
                 Text("どちらの方向でも構いません")
                     .font(.instructionBody).foregroundStyle(.white.opacity(0.6))
-
-            case .calibration(.complete):
-                HStack(spacing: 8) {
-                    Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
-                    Text("赤緯軸を確認しました")
-                        .font(.cardTitle).foregroundStyle(.white)
-                }
-                Text("準備完了。「スタート」と言ってドリフト測定を開始してください")
-                    .font(.instructionBody).foregroundStyle(.white.opacity(0.8))
 
             default:
                 EmptyView()

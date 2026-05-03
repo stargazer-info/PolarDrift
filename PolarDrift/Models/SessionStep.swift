@@ -6,19 +6,6 @@ enum CalibrationStep: Equatable {
     case waitingForVoice
     case detectingCentroid
     case awaitingDecMove(origin: CGPoint)
-    case complete(DecCalibration)
-
-    // DecCalibration は Equatable でないため手書き。
-    // .complete 同士は内容によらず同一扱い（再キャリブレーション時のアニメーション抑制のため）
-    static func == (lhs: CalibrationStep, rhs: CalibrationStep) -> Bool {
-        switch (lhs, rhs) {
-        case (.waitingForVoice, .waitingForVoice):             return true
-        case (.detectingCentroid, .detectingCentroid):         return true
-        case (.awaitingDecMove(let a), .awaitingDecMove(let b)): return a == b
-        case (.complete, .complete):                           return true
-        default:                                               return false
-        }
-    }
 }
 
 // MARK: - DriftMeasureStep
@@ -47,7 +34,6 @@ extension CalibrationStep: CustomStringConvertible {
         case .waitingForVoice:          return "waitingForVoice"
         case .detectingCentroid:        return "detectingCentroid"
         case .awaitingDecMove(let o):   return "awaitingDecMove(origin: \(o))"
-        case .complete:                 return "complete"
         }
     }
 }
@@ -81,7 +67,6 @@ extension SessionStep {
         switch self {
         case .phaseGuide,
              .calibration(.waitingForVoice),
-             .calibration(.complete),
              .driftMeasure(.reintroducing),
              .driftMeasure(.showingResult):
             return true

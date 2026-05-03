@@ -65,9 +65,6 @@ final class CameraManager: NSObject {
         frameContinuation?.finish()
         return AsyncStream { [weak self] continuation in
             self?.frameContinuation = continuation
-            continuation.onTermination = { [weak self] _ in
-                Task { @CameraActor in self?.frameContinuation = nil }
-            }
         }
     }
 }

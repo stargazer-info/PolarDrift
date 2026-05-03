@@ -20,7 +20,7 @@ struct DriftMeasureView: View {
                 driftHistory: [],
                 isTracking: tracker.isTracking,
                 showCrosshair: showDriftCrosshair,
-                crosshairFollowsStar: false,
+                crosshairFollowsStar: crosshairFollowsStar,
                 previewLayer: previewLayer
             )
             .ignoresSafeArea()
@@ -51,9 +51,14 @@ struct DriftMeasureView: View {
 
     private var showDriftCrosshair: Bool {
         switch step {
-        case .driftMeasure(.measuring), .driftMeasure(.showingResult): return true
+        case .driftMeasure: return true
         default: return false
         }
+    }
+
+    private var crosshairFollowsStar: Bool {
+        guard case .driftMeasure(.reintroducing) = step else { return false }
+        return true
     }
 
     // MARK: - Sub-views
