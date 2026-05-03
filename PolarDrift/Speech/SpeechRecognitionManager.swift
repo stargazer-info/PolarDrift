@@ -2,19 +2,16 @@ import Speech
 import AVFoundation
 import Observation
 
-enum SpeechCommand {
-    case start
-}
-
 @Observable
 final class SpeechRecognitionManager: NSObject, SpeechManaging {
     private(set) var isListening = false
+    private(set) var lastCommand: SpeechCommand = .start
+    private(set) var commandCount: Int = 0
 
     private let speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: "ja-JP"))
     private let audioEngine = AVAudioEngine()
     private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
     private var recognitionTask: SFSpeechRecognitionTask?
-    private var commandContinuation: AsyncStream<SpeechCommand>.Continuation?
 
     func requestPermissions() async -> Bool {
         let speech = await withCheckedContinuation { cont in
@@ -28,17 +25,6 @@ final class SpeechRecognitionManager: NSObject, SpeechManaging {
         #else
         return true
         #endif
-    }
-
-    /// 呼び出すたびに前のストリームを終了し新しいストリームを返す
-    func makeCommandStream() -> AsyncStream<SpeechCommand> {
-        commandContinuation?.finish()
-        return AsyncStream { [weak self] continuation in
-            self?.commandContinuation = continuation
-            continuation.onTermination = { [weak self] _ in
-                self?.commandContinuation = nil
-            }
-        }
     }
 
     func startListening() {
@@ -64,7 +50,8 @@ final class SpeechRecognitionManager: NSObject, SpeechManaging {
             let transcript = result.bestTranscription.formattedString
             if transcript.contains("スタート") || transcript.contains("start") || transcript.contains("START") {
                 Task { @MainActor [weak self] in
-                    self?.commandContinuation?.yield(.start)
+                    self?.lastCommand = .start
+                    self?.commandCount += 1
                     self?.restartRecognition()
                 }
             }

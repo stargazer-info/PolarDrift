@@ -46,7 +46,9 @@ typealias AppSessionViewModel = SessionViewModel<SpeechRecognitionManager>
 final class SessionViewModel<Speech: SpeechManaging> {
 
     // MARK: - 共有状態
-    var step: SessionStep = .phaseGuide(.azimuth)
+    var step: SessionStep = .phaseGuide(.azimuth) {
+        didSet { updateListeningState() }
+    }
     var currentPhase: AlignmentPhase = .azimuth
     var calibration: DecCalibration?
     var previewLayer: AVCaptureVideoPreviewLayer?
@@ -74,7 +76,6 @@ final class SessionViewModel<Speech: SpeechManaging> {
 
     init(speech: Speech) {
         self.speech = speech
-        driftMeasureVM.onSessionComplete = { [weak self] in self?.speech.stopListening() }
     }
 
     // MARK: - セットアップ
@@ -93,8 +94,43 @@ final class SessionViewModel<Speech: SpeechManaging> {
     func startSession() {
         currentPhase = .azimuth
         calibration = nil
-        step = .phaseGuide(.azimuth)
-        speech.startListening()
+        step = .phaseGuide(.azimuth)   // didSet が startListening() を呼ぶ
+    }
+
+    func handleVoiceCommand(_ command: SpeechCommand) {
+        switch command {
+        case .start:
+            handleStart()
+        }
+    }
+
+    private func handleStart() {
+        @Bindable var this = self
+        switch step {
+        case .phaseGuide:
+            step = .calibration(.detectingCentroid)
+        case .calibration:
+            calibrationVM.handleVoiceCommand(step: $this.step, calibration: $this.calibration)
+        case .driftMeasure:
+            driftMeasureVM.handleVoiceCommand(step: $this.step,
+                                              calibration: $this.calibration,
+                                              currentPhase: $this.currentPhase)
+        default:
+            break
+        }
+    }
+
+    private func updateListeningState() {
+        switch step {
+        case .phaseGuide,
+             .calibration(.waitingForVoice),
+             .calibration(.complete),
+             .driftMeasure(.reintroducing),
+             .driftMeasure(.showingResult):
+            speech.startListening()
+        default:
+            speech.stopListening()
+        }
     }
 
     // MARK: - ストリーム開始（SessionView の onAppear から呼ばれる）
@@ -107,8 +143,7 @@ final class SessionViewModel<Speech: SpeechManaging> {
                 self.calibrationVM.startStream(
                     stream,
                     step: $this.step,
-                    calibration: $this.calibration,
-                    speech: self.speech
+                    calibration: $this.calibration
                 )
             }
         }
@@ -123,8 +158,7 @@ final class SessionViewModel<Speech: SpeechManaging> {
                     stream,
                     step: $this.step,
                     calibration: $this.calibration,
-                    currentPhase: $this.currentPhase,
-                    speech: self.speech
+                    currentPhase: $this.currentPhase
                 )
             }
         }

@@ -1,10 +1,10 @@
 import SwiftUI
 
-struct CalibrationView<Speech: SpeechManaging>: View {
+struct CalibrationView: View {
     let vm: CalibrationViewModel
     @Binding var step: SessionStep
     @Binding var calibration: DecCalibration?
-    let speech: Speech
+    let isListening: Bool
 
     var body: some View {
         @Bindable var vm = vm
@@ -27,21 +27,10 @@ struct CalibrationView<Speech: SpeechManaging>: View {
                     .padding(.horizontal, 16)
                     .padding(.bottom, 16)
                 if !isDetecting {
-                    VoiceStatusBadge(isListening: speech.isListening)
+                    VoiceStatusBadge(isListening: isListening)
                         .padding(.bottom, 48)
                 } else {
                     Spacer().frame(height: 48)
-                }
-            }
-        }
-        .task {
-            for await command in speech.makeCommandStream() {
-                if case .start = command {
-                    vm.handleVoiceCommand(
-                        step: $step,
-                        calibration: $calibration,
-                        speech: speech
-                    )
                 }
             }
         }

@@ -17,11 +17,10 @@ final class CalibrationViewModel {
 
     // MARK: - フレームストリーム開始・停止
 
-    func startStream<Speech: SpeechManaging>(
+    func startStream(
         _ stream: AsyncStream<GrayImage>,
         step: Binding<SessionStep>,
-        calibration: Binding<DecCalibration?>,
-        speech: Speech
+        calibration: Binding<DecCalibration?>
     ) {
         streamTask?.cancel()
         streamTask = Task {
@@ -29,7 +28,7 @@ final class CalibrationViewModel {
             try? await Task.sleep(for: .milliseconds(400))
             // PhaseGuideViewから直接.detectingCentroidに遷移した場合、タイムアウトを自動開始
             if case .calibration(.detectingCentroid) = step.wrappedValue {
-                startDetectionTimeout(step: step, speech: speech)
+                startDetectionTimeout(step: step)
             }
             for await gray in stream {
                 processFrame(gray, step: step, calibration: calibration)
@@ -44,30 +43,27 @@ final class CalibrationViewModel {
 
     // MARK: - 音声コマンド処理
 
-    func handleVoiceCommand<Speech: SpeechManaging>(
+    func handleVoiceCommand(
         step: Binding<SessionStep>,
-        calibration: Binding<DecCalibration?>,
-        speech: Speech
+        calibration: Binding<DecCalibration?>
     ) {
         guard case .calibration(let calStep) = step.wrappedValue else { return }
         switch calStep {
         case .waitingForVoice:
             detectionFailed = false
-            speech.stopListening()
             step.wrappedValue = .calibration(.detectingCentroid)
-            startDetectionTimeout(step: step, speech: speech)
+            startDetectionTimeout(step: step)
 
         case .detectingCentroid:
             cancelDetectionTimeout()
             detectedCentroid = nil
             detectionFailed = false
             step.wrappedValue = .calibration(.detectingCentroid)
-            startDetectionTimeout(step: step, speech: speech)
+            startDetectionTimeout(step: step)
 
         case .complete(let cal):
             calibration.wrappedValue = cal
             step.wrappedValue = .driftMeasure(.reintroducing(iteration: 1))
-            speech.startListening()
 
         default:
             break
@@ -138,10 +134,7 @@ final class CalibrationViewModel {
 
     // MARK: - 検出タイムアウト
 
-    private func startDetectionTimeout<Speech: SpeechManaging>(
-        step: Binding<SessionStep>,
-        speech: Speech
-    ) {
+    private func startDetectionTimeout(step: Binding<SessionStep>) {
         detectionTimeoutTask = Task {
             try? await Task.sleep(for: .seconds(5))
             guard !Task.isCancelled else { return }
@@ -149,7 +142,6 @@ final class CalibrationViewModel {
                 detectedCentroid = nil
                 detectionFailed = true
                 step.wrappedValue = .calibration(.waitingForVoice)
-                speech.startListening()
             }
         }
     }

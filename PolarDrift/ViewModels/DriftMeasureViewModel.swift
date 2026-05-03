@@ -10,16 +10,14 @@ final class DriftMeasureViewModel {
     var frameProcessor = FrameProcessor()
 
     private var streamTask: Task<Void, Never>?
-    var onSessionComplete: (() -> Void)?  // セッション完了時に呼ばれる（speech.stopListening など）
 
     // MARK: - フレームストリーム開始・停止
 
-    func startStream<Speech: SpeechManaging>(
+    func startStream(
         _ stream: AsyncStream<GrayImage>,
         step: Binding<SessionStep>,
         calibration: Binding<DecCalibration?>,
-        currentPhase: Binding<AlignmentPhase>,
-        speech: Speech
+        currentPhase: Binding<AlignmentPhase>
     ) {
         driftTracker.calibration = calibration.wrappedValue
         streamTask?.cancel()
@@ -37,11 +35,10 @@ final class DriftMeasureViewModel {
 
     // MARK: - 音声コマンド処理
 
-    func handleVoiceCommand<Speech: SpeechManaging>(
+    func handleVoiceCommand(
         step: Binding<SessionStep>,
         calibration: Binding<DecCalibration?>,
-        currentPhase: Binding<AlignmentPhase>,
-        speech: Speech
+        currentPhase: Binding<AlignmentPhase>
     ) {
         guard case .driftMeasure(let driftStep) = step.wrappedValue else { return }
         switch driftStep {
@@ -152,7 +149,6 @@ final class DriftMeasureViewModel {
     ) {
         guard let next = currentPhase.wrappedValue.next else {
             step.wrappedValue = .sessionComplete
-            onSessionComplete?()
             return
         }
         step.wrappedValue = .phaseComplete(currentPhase.wrappedValue)

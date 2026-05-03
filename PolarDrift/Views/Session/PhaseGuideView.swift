@@ -3,8 +3,7 @@ import SwiftUI
 struct PhaseGuideView: View {
     let phase: AlignmentPhase
     @Binding var step: SessionStep
-
-    @Environment(SpeechRecognitionManager.self) private var speech
+    let isListening: Bool
 
     var body: some View {
         VStack(spacing: 32) {
@@ -43,16 +42,8 @@ struct PhaseGuideView: View {
 
             Spacer()
 
-            VoiceStatusBadge(isListening: speech.isListening)
+            VoiceStatusBadge(isListening: isListening)
                 .padding(.bottom, 48)
-        }
-        .task {
-            for await command in speech.makeCommandStream() {
-                if case .start = command {
-                    speech.stopListening()
-                    step = .calibration(.detectingCentroid)
-                }
-            }
         }
     }
 }
