@@ -22,7 +22,7 @@ struct PolarDriftApp: App {
 
     var body: some Scene {
         WindowGroup {
-            MainTabView()
+            SessionView()
                 .environment(sessionVM)
                 .environment(speech)
                 .preferredColorScheme(.dark)
