@@ -2,6 +2,9 @@ import Foundation
 import AVFoundation
 import SwiftUI
 import Observation
+import os
+
+private let logger = Logger(subsystem: "com.polardrift", category: "SessionStep")
 
 // MARK: - SessionViewModel
 
@@ -10,7 +13,10 @@ final class SessionViewModel<Speech: SpeechManaging> {
 
     // MARK: - 共有状態
     var step: SessionStep = .phaseGuide(.azimuth) {
-        didSet { updateListeningState() }
+        didSet {
+            logger.debug("step: \(oldValue) → \(step)")
+            updateListeningState()
+        }
     }
     var currentPhase: AlignmentPhase = .azimuth
     var calibration: DecCalibration?

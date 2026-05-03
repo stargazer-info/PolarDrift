@@ -39,6 +39,43 @@ enum SessionStep {
     case sessionComplete
 }
 
+// MARK: - CustomStringConvertible
+
+extension CalibrationStep: CustomStringConvertible {
+    var description: String {
+        switch self {
+        case .waitingForVoice:          return "waitingForVoice"
+        case .detectingCentroid:        return "detectingCentroid"
+        case .awaitingDecMove(let o):   return "awaitingDecMove(origin: \(o))"
+        case .complete:                 return "complete"
+        }
+    }
+}
+
+extension DriftMeasureStep: CustomStringConvertible {
+    var description: String {
+        switch self {
+        case .reintroducing(let n):         return "reintroducing(iter: \(n))"
+        case .measuring(let n):             return "measuring(iter: \(n))"
+        case .showingResult(let fb, let n): return "showingResult(\(fb), iter: \(n))"
+        }
+    }
+}
+
+extension SessionStep: CustomStringConvertible {
+    var description: String {
+        switch self {
+        case .phaseGuide(let p):    return "phaseGuide(\(p))"
+        case .calibration(let s):   return "calibration.\(s)"
+        case .driftMeasure(let s):  return "driftMeasure.\(s)"
+        case .phaseComplete(let p): return "phaseComplete(\(p))"
+        case .sessionComplete:      return "sessionComplete"
+        }
+    }
+}
+
+// MARK: - shouldListen
+
 extension SessionStep {
     var shouldListen: Bool {
         switch self {
