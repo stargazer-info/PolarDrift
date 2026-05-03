@@ -3,39 +3,6 @@ import AVFoundation
 import SwiftUI
 import Observation
 
-// MARK: - Step enums
-
-enum CalibrationStep: Equatable {
-    case waitingForVoice
-    case detectingCentroid
-    case awaitingDecMove(origin: CGPoint)
-    case complete(DecCalibration)
-
-    static func == (lhs: CalibrationStep, rhs: CalibrationStep) -> Bool {
-        switch (lhs, rhs) {
-        case (.waitingForVoice, .waitingForVoice):   return true
-        case (.detectingCentroid, .detectingCentroid): return true
-        case (.awaitingDecMove(let a), .awaitingDecMove(let b)): return a == b
-        case (.complete, .complete): return true
-        default: return false
-        }
-    }
-}
-
-enum DriftMeasureStep {
-    case reintroducing(iteration: Int)
-    case measuring(iteration: Int)
-    case showingResult(DriftFeedback, iteration: Int)
-}
-
-enum SessionStep {
-    case phaseGuide(AlignmentPhase)
-    case calibration(CalibrationStep)
-    case driftMeasure(DriftMeasureStep)
-    case phaseComplete(AlignmentPhase)
-    case sessionComplete
-}
-
 // MARK: - SessionViewModel
 
 @Observable
@@ -117,16 +84,7 @@ final class SessionViewModel<Speech: SpeechManaging> {
     }
 
     private func updateListeningState() {
-        switch step {
-        case .phaseGuide,
-             .calibration(.waitingForVoice),
-             .calibration(.complete),
-             .driftMeasure(.reintroducing),
-             .driftMeasure(.showingResult):
-            speech.startListening()
-        default:
-            speech.stopListening()
-        }
+        step.shouldListen ? speech.startListening() : speech.stopListening()
     }
 
     // MARK: - ストリーム開始（SessionView の onAppear から呼ばれる）
