@@ -1,5 +1,8 @@
 import SwiftUI
 import Observation
+import os
+
+private let driftLogger = Logger(subsystem: "com.polardrift", category: "DriftMeasure")
 
 @Observable
 final class DriftMeasureViewModel {
@@ -111,6 +114,9 @@ final class DriftMeasureViewModel {
         calibration: Binding<DecCalibration?>,
         currentPhase: Binding<AlignmentPhase>
     ) {
+        if driftTracker.imageSize == .zero {
+            driftTracker.imageSize = CGSize(width: gray.width, height: gray.height)
+        }
         guard let last = detectedCentroid ?? driftTracker.sessionOrigin else { return }
         if let pos = frameProcessor.trackCentroid(
             in: gray, lastPosition: last,
@@ -132,11 +138,20 @@ final class DriftMeasureViewModel {
         calibration: Binding<DecCalibration?>,
         currentPhase: Binding<AlignmentPhase>
     ) {
+        let prevSlope = driftTracker.previousSlope  // stopTracking より前に読む
+        let elapsed = driftTracker.elapsedTime
         let slope = driftTracker.stopTracking()
         let isSignificant = driftTracker.isDriftSignificant
+        let n = driftTracker.regression.n
+        let se = driftTracker.slopeStdError
+        let tStat = se > 0 ? slope / se : 0
+        let scale = Double(driftTracker.imageSize.height > 0 ? driftTracker.imageSize.height : 720)
+        driftLogger.info(
+            "測定完了: t=\(String(format: "%.1f", elapsed))s n=\(n) rate=\(String(format: "%.2f", slope*60*scale))px/min(actual) t統計量=\(String(format: "%.2f", tStat)) 有意=\(isSignificant)"
+        )
 
         let feedback: DriftFeedback
-        if let prev = driftTracker.previousSlope {
+        if let prev = prevSlope {
             feedback = DriftFeedback.evaluate(current: slope, previous: prev, isSignificant: isSignificant)
         } else {
             feedback = isSignificant ? .sameDirection : .complete

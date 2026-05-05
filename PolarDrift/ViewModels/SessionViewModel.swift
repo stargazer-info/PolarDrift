@@ -14,7 +14,7 @@ final class SessionViewModel<Speech: SpeechManaging> {
     // MARK: - 共有状態
     var step: SessionStep = .phaseGuide(.azimuth) {
         didSet {
-            logger.debug("step: \(oldValue) → \(self.step)")
+            logger.info("step: \(oldValue) → \(self.step)")
             updateListeningState()
         }
     }

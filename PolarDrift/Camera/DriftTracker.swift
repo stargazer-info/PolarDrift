@@ -1,6 +1,9 @@
 import Foundation
 import CoreGraphics
 import Observation
+import os
+
+private let driftLogger = Logger(subsystem: "com.polardrift", category: "DriftMeasure")
 
 enum StarTrackingState {
     case idle
@@ -17,16 +20,19 @@ final class DriftTracker {
     var currentSlope: Double = 0       // px/秒（符号付き、Dec軸投影済み）
     var slopeStdError: Double = 0
     var isDriftSignificant: Bool = false
+    var elapsedTime: TimeInterval = 0  // 計測開始からの経過秒数
 
     var previousSlope: Double?
 
     var calibration: DecCalibration?
+    var imageSize: CGSize = .zero
 
     var trackingState: StarTrackingState = .idle
     var sessionOrigin: CGPoint?        // 測定「スタート」瞬間の位置（十字線固定点）
 
     private var recentDisplacements: [(CGVector, Date)] = []
     private var trackingStartTime: Date?
+    private var lastLoggedSecond: Int = -1
 
     var predictedVelocity: CGVector {
         let recent = recentDisplacements.suffix(3)
@@ -40,10 +46,11 @@ final class DriftTracker {
         isTracking = true
         trackingStartTime = Date()
         sessionOrigin = origin
-        previousSlope = currentSlope.isNaN ? nil : currentSlope
         currentSlope = 0
         slopeStdError = 0
         isDriftSignificant = false
+        elapsedTime = 0
+        lastLoggedSecond = -1
     }
 
     @discardableResult
@@ -70,11 +77,28 @@ final class DriftTracker {
         trackingState = .tracking(lastPosition: point)
 
         let t = time.timeIntervalSince(startTime)
+        elapsedTime = t
         regression.add(t: t, y: Double(decDisp))
 
         currentSlope = regression.slope
         slopeStdError = regression.slopeStdError
-        isDriftSignificant = regression.isSignificant
+        // 統計的有意 かつ 実ピクセル換算で 1 px/分超過の両方を満たす場合のみ有意とする
+        let threshold = imageSize.height > 0 ? 1.0 / imageSize.height : 1.0 / 720
+        isDriftSignificant = regression.isSignificant && abs(currentSlope * 60) >= threshold
+
+        let sec = Int(elapsedTime)
+        if sec > lastLoggedSecond {
+            lastLoggedSecond = sec
+            let scale  = imageSize.height > 0 ? imageSize.height : 720
+            let ratePx = currentSlope * 60 * scale       // 実ピクセル/分
+            let sePx   = slopeStdError * 60 * scale
+            let tStat  = slopeStdError > 0 ? currentSlope / slopeStdError : 0
+            let xPx    = imageSize.width  > 0 ? point.x * imageSize.width  : point.x
+            let yPx    = imageSize.height > 0 ? point.y * imageSize.height : point.y
+            driftLogger.info(
+                "t=\(sec)s n=\(self.regression.n) pos=(\(String(format: "%.1f", xPx)),\(String(format: "%.1f", yPx)))px rate=\(String(format: "%.2f", ratePx))±\(String(format: "%.2f", sePx*2))px/min(actual) t=\(String(format: "%.2f", tStat)) sig=\(self.isDriftSignificant)"
+            )
+        }
     }
 
     // 星ロスト時の処理（FrameProcessorがnilを返したフレームごとに呼ぶ）
@@ -100,6 +124,6 @@ final class DriftTracker {
     }
 
     var isPhaseComplete: Bool {
-        !isDriftSignificant && regression.n >= 30
+        elapsedTime >= 30 || (isDriftSignificant && elapsedTime >= 5)
     }
 }
