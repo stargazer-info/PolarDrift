@@ -55,6 +55,13 @@ final class SpeechRecognitionManager: NSObject, SpeechManaging {
                     self?.restartRecognition()
                 }
             }
+            if transcript.contains("スキップ") || transcript.contains("skip") || transcript.contains("SKIP") {
+                Task { @MainActor [weak self] in
+                    self?.lastCommand = .skip
+                    self?.commandCount += 1
+                    self?.restartRecognition()
+                }
+            }
         }
 
         do {

@@ -164,6 +164,14 @@ final class DriftMeasureViewModel {
         if feedback == .complete { advancePhase(step: step, calibration: calibration, currentPhase: currentPhase) }
     }
 
+    func forceCompletePhase(
+        step: Binding<SessionStep>,
+        calibration: Binding<DecCalibration?>,
+        currentPhase: Binding<AlignmentPhase>
+    ) {
+        advancePhase(step: step, calibration: calibration, currentPhase: currentPhase)
+    }
+
     private func advancePhase(
         step: Binding<SessionStep>,
         calibration: Binding<DecCalibration?>,
@@ -178,6 +186,7 @@ final class DriftMeasureViewModel {
         calibration.wrappedValue = nil
         driftTracker.calibration = nil
         driftTracker.previousSlope = nil
+        driftTracker.resetHistory()
         Task {
             try? await Task.sleep(for: .seconds(3))
             step.wrappedValue = .phaseGuide(next)

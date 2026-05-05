@@ -70,7 +70,19 @@ final class SessionViewModel<Speech: SpeechManaging> {
         switch command {
         case .start:
             handleStart()
+        case .skip:
+            handleSkip()
         }
+    }
+
+    private func handleSkip() {
+        guard case .driftMeasure(.showingResult) = step else { return }
+        @Bindable var this = self
+        driftMeasureVM.forceCompletePhase(
+            step: $this.step,
+            calibration: $this.calibration,
+            currentPhase: $this.currentPhase
+        )
     }
 
     private func handleStart() {

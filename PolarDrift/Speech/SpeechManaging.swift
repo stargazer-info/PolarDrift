@@ -1,5 +1,6 @@
 enum SpeechCommand {
     case start
+    case skip
 }
 
 protocol SpeechManaging: AnyObject {

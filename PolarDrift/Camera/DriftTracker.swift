@@ -23,6 +23,7 @@ final class DriftTracker {
     var elapsedTime: TimeInterval = 0  // 計測開始からの経過秒数
 
     var previousSlope: Double?
+    private(set) var slopeHistory: [(rate: Double, iteration: Int)] = []
 
     var calibration: DecCalibration?
     var imageSize: CGSize = .zero
@@ -57,6 +58,9 @@ final class DriftTracker {
     func stopTracking() -> Double {
         isTracking = false
         previousSlope = currentSlope
+        let ratePx = currentSlope * 60 * (imageSize.height > 0 ? imageSize.height : 720)
+        slopeHistory.append((rate: ratePx, iteration: slopeHistory.count + 1))
+        if slopeHistory.count > 5 { slopeHistory.removeFirst() }
         return currentSlope
     }
 
@@ -121,6 +125,10 @@ final class DriftTracker {
     func resetLost() {
         trackingState = .idle
         recentDisplacements = []
+    }
+
+    func resetHistory() {
+        slopeHistory = []
     }
 
     var isPhaseComplete: Bool {

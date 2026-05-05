@@ -164,6 +164,25 @@ struct DriftMeasureView: View {
                     .foregroundStyle(feedback == .sameDirection ? Color.driftPositive : Color.driftNegative)
                 Text("「スタート」と言って再測定します")
                     .font(.instructionBody).foregroundStyle(.white.opacity(0.6))
+
+                if !tracker.slopeHistory.isEmpty {
+                    Divider().background(.white.opacity(0.2))
+                    VStack(spacing: 4) {
+                        ForEach(tracker.slopeHistory.reversed(), id: \.iteration) { entry in
+                            HStack {
+                                Text("測定\(entry.iteration)")
+                                    .font(.caption2).foregroundStyle(.white.opacity(0.5))
+                                Spacer()
+                                Text(String(format: "%.1f px/分", entry.rate))
+                                    .font(.caption.monospacedDigit())
+                                    .foregroundStyle(abs(entry.rate) < 60 ? .green : .white.opacity(0.8))
+                            }
+                        }
+                    }
+                }
+
+                Text("「スキップ」と言うと次のフェーズへ進みます")
+                    .font(.caption2).foregroundStyle(.white.opacity(0.35))
             }
         }
         .padding(20)
