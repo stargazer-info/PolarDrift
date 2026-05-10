@@ -13,6 +13,14 @@ enum DriftFeedback {
         }
     }
 
+    var recordLabel: String {
+        switch self {
+        case .sameDirection:    return "sameDirection"
+        case .reverseDirection: return "reverseDirection"
+        case .complete:         return "complete"
+        }
+    }
+
     // 符号付き slope 比較でフィードバックを生成
     // current, previous: DriftTracker.currentSlope の値
     static func evaluate(current: Double, previous: Double, isSignificant: Bool) -> DriftFeedback {

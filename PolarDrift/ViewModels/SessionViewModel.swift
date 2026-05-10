@@ -15,6 +15,7 @@ final class SessionViewModel<Speech: SpeechManaging> {
     var step: SessionStep = .phaseGuide(.azimuth) {
         didSet {
             logger.info("step: \(oldValue) → \(self.step)")
+            handleStepTransition(from: oldValue, to: step)
             updateListeningState()
         }
     }
@@ -42,6 +43,7 @@ final class SessionViewModel<Speech: SpeechManaging> {
     // MARK: - 子VM
     let calibrationVM  = CalibrationViewModel()
     let driftMeasureVM = DriftMeasureViewModel()
+    let recorder       = SessionRecorder()
 
     init(speech: Speech) {
         self.speech = speech
@@ -63,7 +65,32 @@ final class SessionViewModel<Speech: SpeechManaging> {
     func startSession() {
         currentPhase = .azimuth
         calibration = nil
+        recorder.startSession()
         step = .phaseGuide(.azimuth)   // didSet が startListening() を呼ぶ
+    }
+
+    private func handleStepTransition(from old: SessionStep, to new: SessionStep) {
+        switch new {
+        case .driftMeasure(.reintroducing(1)):
+            // キャリブレーション完了直後 → キャリブレーション情報を記録
+            if case .calibration = old {
+                recorder.recordCalibration(calibration, phase: currentPhase)
+            }
+
+        case .driftMeasure(.showingResult(let feedback, let iter)):
+            recorder.recordRawFrames(iteration: iter, tracker: driftMeasureVM.driftTracker)
+            recorder.recordMeasurement(
+                feedback: feedback.recordLabel,
+                iteration: iter,
+                tracker: driftMeasureVM.driftTracker
+            )
+
+        case .sessionComplete:
+            recorder.saveSession()
+
+        default:
+            break
+        }
     }
 
     func handleVoiceCommand(_ command: SpeechCommand) {
@@ -76,7 +103,12 @@ final class SessionViewModel<Speech: SpeechManaging> {
     }
 
     private func handleSkip() {
-        guard case .driftMeasure(.showingResult) = step else { return }
+        guard case .driftMeasure(.showingResult(_, let iter)) = step else { return }
+        recorder.recordMeasurement(
+            feedback: "skipped",
+            iteration: iter,
+            tracker: driftMeasureVM.driftTracker
+        )
         @Bindable var this = self
         driftMeasureVM.forceCompletePhase(
             step: $this.step,

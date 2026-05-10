@@ -31,6 +31,8 @@ final class DriftTracker {
     var trackingState: StarTrackingState = .idle
     var sessionOrigin: CGPoint?        // 測定「スタート」瞬間の位置（十字線固定点）
 
+    private(set) var rawFrames: [(elapsed: Double, x: Double, y: Double, decDisp: Double)] = []
+
     private var recentDisplacements: [(CGVector, Date)] = []
     private var trackingStartTime: Date?
     private var lastLoggedSecond: Int = -1
@@ -52,6 +54,7 @@ final class DriftTracker {
         isDriftSignificant = false
         elapsedTime = 0
         lastLoggedSecond = -1
+        rawFrames = []
     }
 
     @discardableResult
@@ -82,6 +85,7 @@ final class DriftTracker {
 
         let t = time.timeIntervalSince(startTime)
         elapsedTime = t
+        rawFrames.append((elapsed: t, x: Double(point.x), y: Double(point.y), decDisp: Double(decDisp)))
         regression.add(t: t, y: Double(decDisp))
 
         currentSlope = regression.slope
