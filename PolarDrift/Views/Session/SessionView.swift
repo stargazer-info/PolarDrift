@@ -85,7 +85,7 @@ struct SessionView: View {
 
     private var needsDimOverlay: Bool {
         switch viewModel.step {
-        case .calibration, .driftMeasure: return false
+        case .calibration, .driftMeasure, .phaseGuide: return false
         default: return true
         }
     }

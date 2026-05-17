@@ -6,39 +6,42 @@ struct PhaseGuideView: View {
     let isListening: Bool
 
     var body: some View {
-        VStack(spacing: 32) {
-            Spacer()
+        VStack {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    let color = phase == .azimuth ? Color.phaseAzimuth : Color.phaseAltitude
+                    Label(phase.displayName,
+                          systemImage: phase == .azimuth ? "arrow.left.and.right" : "arrow.up.and.down")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(color)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 4)
+                        .background(color.opacity(0.2), in: Capsule())
+                    Spacer()
+                }
 
-            VStack(spacing: 16) {
-                Image(systemName: phase == .azimuth ? "arrow.left.and.right" : "arrow.up.and.down")
-                    .font(.system(size: 64))
-                    .foregroundStyle(phase == .azimuth ? Color.phaseAzimuth : Color.phaseAltitude)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(phase.guideMessage)
+                        .font(.cardTitle)
+                        .foregroundStyle(.white.opacity(0.9))
+                        .multilineTextAlignment(.leading)
 
-                Text(phase.displayName)
-                    .font(.phaseTitle)
-                    .foregroundStyle(.white)
-            }
-
-            VStack(spacing: 12) {
-                Text(phase.guideMessage)
-                    .font(.cardTitle)
-                    .foregroundStyle(.white.opacity(0.9))
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 32)
-
-                if phase == .azimuth {
-                    Text("赤緯 0° 付近の明るい星が最適です")
+                    Text(phase == .azimuth
+                         ? "赤緯 0° 付近の明るい星が最適です"
+                         : "高度 20〜30° 付近、赤緯 0° 付近の星が最適です")
                         .font(.instructionBody)
                         .foregroundStyle(.white.opacity(0.6))
-                } else {
-                    Text("高度 20〜30° 付近、赤緯 0° 付近の星が最適です")
+
+                    Text("「スタート」と言って開始します")
                         .font(.instructionBody)
                         .foregroundStyle(.white.opacity(0.6))
                 }
+                .padding(16)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.astronomyCard.opacity(0.9), in: RoundedRectangle(cornerRadius: 16))
             }
-            .padding(24)
-            .background(Color.astronomyCard, in: RoundedRectangle(cornerRadius: 16))
-            .padding(.horizontal, 24)
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
 
             Spacer()
 
