@@ -168,7 +168,7 @@ struct DriftMeasureView: View {
                 if !tracker.slopeHistory.isEmpty {
                     Divider().background(.white.opacity(0.2))
                     VStack(spacing: 4) {
-                        ForEach(tracker.slopeHistory.reversed(), id: \.iteration) { entry in
+                        ForEach(tracker.slopeHistory.suffix(5).reversed(), id: \.iteration) { entry in
                             HStack {
                                 Text("測定\(entry.iteration)")
                                     .font(.caption2).foregroundStyle(.white.opacity(0.5))

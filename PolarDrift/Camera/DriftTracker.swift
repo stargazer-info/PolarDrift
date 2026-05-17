@@ -58,12 +58,11 @@ final class DriftTracker {
     }
 
     @discardableResult
-    func stopTracking() -> Double {
+    func stopTracking(iteration: Int) -> Double {
         isTracking = false
         previousSlope = currentSlope
         let ratePx = currentSlope * 60 * (imageSize.height > 0 ? imageSize.height : 720)
-        slopeHistory.append((rate: ratePx, iteration: slopeHistory.count + 1))
-        if slopeHistory.count > 5 { slopeHistory.removeFirst() }
+        slopeHistory.append((rate: ratePx, iteration: iteration))
         return currentSlope
     }
 

@@ -140,7 +140,11 @@ final class DriftMeasureViewModel {
     ) {
         let prevSlope = driftTracker.previousSlope  // stopTracking より前に読む
         let elapsed = driftTracker.elapsedTime
-        let slope = driftTracker.stopTracking()
+
+        let iter: Int
+        if case .driftMeasure(.measuring(let n)) = step.wrappedValue { iter = n } else { iter = 1 }
+
+        let slope = driftTracker.stopTracking(iteration: iter)
         let isSignificant = driftTracker.isDriftSignificant
         let n = driftTracker.regression.n
         let se = driftTracker.slopeStdError
@@ -157,8 +161,6 @@ final class DriftMeasureViewModel {
             feedback = isSignificant ? .sameDirection : .complete
         }
 
-        let iter: Int
-        if case .driftMeasure(.measuring(let n)) = step.wrappedValue { iter = n } else { iter = 1 }
         step.wrappedValue = .driftMeasure(.showingResult(feedback, iteration: iter))
 
         if feedback == .complete { advancePhase(step: step, calibration: calibration, currentPhase: currentPhase) }
