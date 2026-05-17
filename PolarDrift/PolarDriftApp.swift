@@ -13,6 +13,7 @@ struct PolarDriftApp: App {
         WindowGroup {
             SessionView()
                 .preferredColorScheme(.dark)
+                .task { UIApplication.shared.isIdleTimerDisabled = true }
         }
     }
 }
