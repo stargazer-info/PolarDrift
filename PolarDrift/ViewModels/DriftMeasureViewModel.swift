@@ -158,7 +158,7 @@ final class DriftMeasureViewModel {
         if let prev = prevSlope {
             feedback = DriftFeedback.evaluate(current: slope, previous: prev, isSignificant: isSignificant)
         } else {
-            feedback = isSignificant ? .sameDirection : .complete
+            feedback = isSignificant ? .initial : .complete
         }
 
         step.wrappedValue = .driftMeasure(.showingResult(feedback, iteration: iter))

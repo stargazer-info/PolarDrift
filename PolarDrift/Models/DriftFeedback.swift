@@ -1,12 +1,14 @@
 import Foundation
 
 enum DriftFeedback {
+    case initial          // 初回測定（比較基準なし）
     case sameDirection    // 同じ方向へ動かして下さい（改善中）
     case reverseDirection // 逆方向へ動かして下さい（悪化 or 行き過ぎ）
     case complete         // このフェーズ完了
 
     var message: String {
         switch self {
+        case .initial:          return "どちらか試しに動かしてください"
         case .sameDirection:    return "同じ方向へ動かして下さい"
         case .reverseDirection: return "逆方向へ動かして下さい"
         case .complete:         return "このフェーズ完了！"
@@ -15,6 +17,7 @@ enum DriftFeedback {
 
     var recordLabel: String {
         switch self {
+        case .initial:          return "initial"
         case .sameDirection:    return "sameDirection"
         case .reverseDirection: return "reverseDirection"
         case .complete:         return "complete"

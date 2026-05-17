@@ -161,7 +161,7 @@ struct DriftMeasureView: View {
             if feedback != .complete {
                 Text(feedback.message)
                     .font(.phaseTitle)
-                    .foregroundStyle(feedback == .sameDirection ? Color.driftPositive : Color.driftNegative)
+                    .foregroundStyle(messageColor(feedback))
                 Text("「スタート」と言って再測定します")
                     .font(.instructionBody).foregroundStyle(.white.opacity(0.6))
 
@@ -175,7 +175,7 @@ struct DriftMeasureView: View {
                                 Spacer()
                                 Text(String(format: "%.1f px/分", entry.rate))
                                     .font(.caption.monospacedDigit())
-                                    .foregroundStyle(abs(entry.rate) < 60 ? .green : .white.opacity(0.8))
+                                    .foregroundStyle(abs(entry.rate) < 1.0 ? .green : .white.opacity(0.8))
                             }
                         }
                     }
@@ -188,6 +188,15 @@ struct DriftMeasureView: View {
         .padding(20)
         .frame(maxWidth: .infinity)
         .background(Color.astronomyCard.opacity(0.95), in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    private func messageColor(_ fb: DriftFeedback) -> Color {
+        switch fb {
+        case .initial:          return .white.opacity(0.85)
+        case .sameDirection:    return Color.driftPositive
+        case .reverseDirection: return Color.driftNegative
+        case .complete:         return .green
+        }
     }
 
     private var lostAlertCard: some View {
