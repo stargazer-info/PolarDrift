@@ -98,7 +98,7 @@ struct DriftMeasureView: View {
             if tracker.isTracking && tracker.regression.n >= 5 {
                 let rate = tracker.currentSlope * 60
                 let se   = tracker.slopeStdError * 60
-                Text(String(format: "%.1f ± %.1f px/分", rate, se * 2))
+                Text(String(format: "%.1f ± %.1f px/分 (3σ)", rate, se * 3))
                     .font(.driftRate)
                     .foregroundStyle(driftColor(rate))
                     .contentTransition(.numericText())

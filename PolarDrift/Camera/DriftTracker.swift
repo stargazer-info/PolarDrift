@@ -103,7 +103,7 @@ final class DriftTracker {
             let xPx    = imageSize.width  > 0 ? point.x * imageSize.width  : point.x
             let yPx    = imageSize.height > 0 ? point.y * imageSize.height : point.y
             driftLogger.info(
-                "t=\(sec)s n=\(self.regression.n) pos=(\(String(format: "%.1f", xPx)),\(String(format: "%.1f", yPx)))px rate=\(String(format: "%.2f", ratePx))±\(String(format: "%.2f", sePx*2))px/min(actual) t=\(String(format: "%.2f", tStat)) sig=\(self.isDriftSignificant)"
+                "t=\(sec)s n=\(self.regression.n) pos=(\(String(format: "%.1f", xPx)),\(String(format: "%.1f", yPx)))px rate=\(String(format: "%.2f", ratePx))±\(String(format: "%.2f", sePx*3))px/min(3σ) t=\(String(format: "%.2f", tStat)) sig=\(self.isDriftSignificant) precise=\(self.isPrecise)"
             )
         }
     }
@@ -134,7 +134,15 @@ final class DriftTracker {
         slopeHistory = []
     }
 
+    // 3σ ≤ 1 px/分 を満たすかどうか
+    var isPrecise: Bool {
+        guard regression.n >= 10 else { return false }
+        let h = imageSize.height > 0 ? imageSize.height : 720
+        let threeSigmaPxPerMin = slopeStdError * 60 * h * 3
+        return threeSigmaPxPerMin.isFinite && threeSigmaPxPerMin <= 1.0
+    }
+
     var isPhaseComplete: Bool {
-        elapsedTime >= 30 || (isDriftSignificant && elapsedTime >= 5)
+        elapsedTime >= 30 || (isPrecise && elapsedTime >= 5)
     }
 }
