@@ -1,0 +1,2 @@
+session_id,session_start,phase,cal_dec_axis_x,cal_dec_axis_y,iteration,duration_sec,sample_count,drift_rate_px_per_min,drift_rate_se_2sigma,t_statistic,is_significant,feedback
+AC76D53E-200E-4555-8D3B-61F327719D9D,2026-05-16T12:16:49Z,azimuth,-0.9829106440583832,0.1840833121082253,1,5.015,151,5.9133,0.5380,21.9843,true,sameDirection
