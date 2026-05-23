@@ -12,7 +12,8 @@ final class SessionRecorder {
         "t_statistic,is_significant,feedback"
 
     private static let rawHeader =
-        "session_id,phase,iteration,elapsed_sec,x_norm,y_norm,dec_disp_norm"
+        "session_id,phase,iteration,elapsed_sec," +
+        "x_px,y_px,dec_disp_px,image_width,image_height"
 
     // MARK: - 状態
 
@@ -71,16 +72,23 @@ final class SessionRecorder {
     }
 
     func recordRawFrames(iteration: Int, tracker: DriftTracker) {
-        let lines = tracker.rawFrames.map { frame in
-            [
-                sessionId, currentPhase, String(iteration),
-                String(format: "%.6f", frame.elapsed),
-                String(format: "%.6f", frame.x),
-                String(format: "%.6f", frame.y),
-                String(format: "%.6f", frame.decDisp)
-            ].joined(separator: ",")
-        }.joined(separator: "\n")
-        if !lines.isEmpty { append(lines + "\n", to: rawURL) }
+        let w = tracker.imageSize.width  > 0 ? Double(tracker.imageSize.width)  : 1280
+        let h = tracker.imageSize.height > 0 ? Double(tracker.imageSize.height) : 720
+        let wStr = String(format: "%.0f", w)
+        let hStr = String(format: "%.0f", h)
+        let iterStr = String(iteration)
+        let lines: [String] = tracker.rawFrames.map { frame in
+            let xPx       = String(format: "%.3f", frame.x       * w)
+            let yPx       = String(format: "%.3f", frame.y       * h)
+            let decPx     = String(format: "%.3f", frame.decDisp * h)
+            let elapsed   = String(format: "%.6f", frame.elapsed)
+            let fields: [String] = [
+                sessionId, currentPhase, iterStr,
+                elapsed, xPx, yPx, decPx, wStr, hStr
+            ]
+            return fields.joined(separator: ",")
+        }
+        if !lines.isEmpty { append(lines.joined(separator: "\n") + "\n", to: rawURL) }
     }
 
     // saveSession は後方互換のために残すが実質不要
