@@ -162,8 +162,6 @@ final class DriftMeasureViewModel {
         }
 
         step.wrappedValue = .driftMeasure(.showingResult(feedback, iteration: iter))
-
-        if feedback == .complete { advancePhase(step: step, calibration: calibration, currentPhase: currentPhase) }
     }
 
     func forceCompletePhase(
