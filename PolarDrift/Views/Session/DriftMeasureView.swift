@@ -29,6 +29,11 @@ struct DriftMeasureView: View {
                 phaseHeader
                     .padding(.horizontal, 16)
                     .padding(.top, 8)
+                if case .driftMeasure(.showingResult(let feedback, _)) = step {
+                    resultCard(feedback)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 8)
+                }
                 Spacer()
                 if case .lostAlert = tracker.trackingState {
                     lostAlertCard
@@ -122,21 +127,23 @@ struct DriftMeasureView: View {
     private var bottomBar: some View {
         VStack(spacing: 12) {
             switch step {
-            case .driftMeasure(.reintroducing(let n)):
-                instructionText(n == 1
-                    ? "星を中央に導入して「スタート」と言ってください"
-                    : "調整後、星を中央に導入して「スタート」と言ってください")
+            case .driftMeasure(.reintroducing):
+                instructionText("星を中央に導入してください")
+                VoiceStatusBadge(isListening: isListening,
+                                 expectedCommand: "「スタート」")
 
             case .driftMeasure(.measuring):
                 instructionText("望遠鏡を動かさないでください")
+                VoiceStatusBadge(isListening: isListening,
+                                 expectedCommand: nil)
 
-            case .driftMeasure(.showingResult(let feedback, _)):
-                resultCard(feedback)
+            case .driftMeasure(.showingResult):
+                VoiceStatusBadge(isListening: isListening,
+                                 expectedCommand: "「スタート」または「スキップ」")
 
             default:
-                EmptyView()
+                VoiceStatusBadge(isListening: isListening)
             }
-            VoiceStatusBadge(isListening: isListening)
         }
     }
 
@@ -151,7 +158,7 @@ struct DriftMeasureView: View {
     }
 
     private func resultCard(_ feedback: DriftFeedback) -> some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 6) {
             HStack(spacing: 8) {
                 Image(systemName: feedback == .complete ? "checkmark.circle.fill" : "arrow.triangle.2.circlepath")
                     .foregroundStyle(feedback == .complete ? .green : Color.astronomyAccent)
@@ -160,35 +167,29 @@ struct DriftMeasureView: View {
             }
             if feedback != .complete {
                 Text(feedback.message)
-                    .font(.phaseTitle)
+                    .font(.cardTitle)
                     .foregroundStyle(messageColor(feedback))
             }
 
-            Text("「スタート」と言って再測定します")
-                .font(.instructionBody).foregroundStyle(.white.opacity(0.6))
-
             if !tracker.slopeHistory.isEmpty {
                 Divider().background(.white.opacity(0.2))
-                VStack(spacing: 4) {
-                    ForEach(tracker.slopeHistory.suffix(5).reversed(), id: \.iteration) { entry in
+                VStack(spacing: 2) {
+                    ForEach(tracker.slopeHistory.suffix(3).reversed(), id: \.iteration) { entry in
                         HStack {
                             Text("測定\(entry.iteration)")
                                 .font(.caption2).foregroundStyle(.white.opacity(0.5))
                             Spacer()
-                            Text(String(format: "%.1f px/分", entry.rate))
+                            Text(String(format: "%.1f ± %.1f px/分", entry.rate, entry.sePxPerMin * 3))
                                 .font(.caption.monospacedDigit())
                                 .foregroundStyle(abs(entry.rate) < 1.0 ? .green : .white.opacity(0.8))
                         }
                     }
                 }
             }
-
-            Text("「スキップ」と言うと次のフェーズへ進みます")
-                .font(.caption2).foregroundStyle(.white.opacity(0.35))
         }
-        .padding(20)
+        .padding(14)
         .frame(maxWidth: .infinity)
-        .background(Color.astronomyCard.opacity(0.95), in: RoundedRectangle(cornerRadius: 16))
+        .background(Color.astronomyCard.opacity(0.85), in: RoundedRectangle(cornerRadius: 16))
     }
 
     private func messageColor(_ fb: DriftFeedback) -> Color {
