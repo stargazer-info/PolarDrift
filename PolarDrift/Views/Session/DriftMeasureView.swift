@@ -29,8 +29,8 @@ struct DriftMeasureView: View {
                 phaseHeader
                     .padding(.horizontal, 16)
                     .padding(.top, 8)
-                if case .driftMeasure(.showingResult(let feedback, _)) = step {
-                    resultCard(feedback)
+                if case .driftMeasure(.showingResult) = step, !tracker.slopeHistory.isEmpty {
+                    historyCard
                         .padding(.horizontal, 16)
                         .padding(.top, 8)
                 }
@@ -93,7 +93,7 @@ struct DriftMeasureView: View {
         switch step {
         case .driftMeasure(.reintroducing(let n)): return n
         case .driftMeasure(.measuring(let n)): return n
-        case .driftMeasure(.showingResult(_, let n)): return n
+        case .driftMeasure(.showingResult(let n)): return n
         default: return nil
         }
     }
@@ -157,48 +157,22 @@ struct DriftMeasureView: View {
             .background(Color.astronomyCard.opacity(0.9), in: RoundedRectangle(cornerRadius: 16))
     }
 
-    private func resultCard(_ feedback: DriftFeedback) -> some View {
-        VStack(spacing: 6) {
-            HStack(spacing: 8) {
-                Image(systemName: feedback == .complete ? "checkmark.circle.fill" : "arrow.triangle.2.circlepath")
-                    .foregroundStyle(feedback == .complete ? .green : Color.astronomyAccent)
-                Text(feedback == .complete ? "このフェーズ完了！" : currentPhase.adjustmentAxis)
-                    .font(.cardTitle).foregroundStyle(.white)
-            }
-            if feedback != .complete {
-                Text(feedback.message)
-                    .font(.cardTitle)
-                    .foregroundStyle(messageColor(feedback))
-            }
-
-            if !tracker.slopeHistory.isEmpty {
-                Divider().background(.white.opacity(0.2))
-                VStack(spacing: 2) {
-                    ForEach(tracker.slopeHistory.suffix(3).reversed(), id: \.iteration) { entry in
-                        HStack {
-                            Text("測定\(entry.iteration)")
-                                .font(.caption2).foregroundStyle(.white.opacity(0.5))
-                            Spacer()
-                            Text(String(format: "%.1f ± %.1f px/分", entry.rate, entry.sePxPerMin * 3))
-                                .font(.caption.monospacedDigit())
-                                .foregroundStyle(abs(entry.rate) < 1.0 ? .green : .white.opacity(0.8))
-                        }
-                    }
+    private var historyCard: some View {
+        VStack(spacing: 2) {
+            ForEach(tracker.slopeHistory.suffix(3).reversed(), id: \.iteration) { entry in
+                HStack {
+                    Text("測定\(entry.iteration)")
+                        .font(.caption2).foregroundStyle(.white.opacity(0.5))
+                    Spacer()
+                    Text(String(format: "%.1f ± %.1f px/分", entry.rate, entry.sePxPerMin * 3))
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(abs(entry.rate) < 1.0 ? .green : .white.opacity(0.8))
                 }
             }
         }
         .padding(14)
         .frame(maxWidth: .infinity)
         .background(Color.astronomyCard.opacity(0.85), in: RoundedRectangle(cornerRadius: 16))
-    }
-
-    private func messageColor(_ fb: DriftFeedback) -> Color {
-        switch fb {
-        case .initial:          return .white.opacity(0.85)
-        case .sameDirection:    return Color.driftPositive
-        case .reverseDirection: return Color.driftNegative
-        case .complete:         return .green
-        }
     }
 
     private var lostAlertCard: some View {

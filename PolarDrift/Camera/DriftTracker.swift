@@ -22,7 +22,6 @@ final class DriftTracker {
     var isDriftSignificant: Bool = false
     var elapsedTime: TimeInterval = 0  // 計測開始からの経過秒数
 
-    var previousSlope: Double?
     private(set) var slopeHistory: [(rate: Double, sePxPerMin: Double, iteration: Int)] = []
 
     var calibration: DecCalibration?
@@ -60,7 +59,6 @@ final class DriftTracker {
     @discardableResult
     func stopTracking(iteration: Int) -> Double {
         isTracking = false
-        previousSlope = currentSlope
         let scale = imageSize.height > 0 ? imageSize.height : 720
         let ratePx = currentSlope * 60 * scale
         let sePx = slopeStdError * 60 * scale

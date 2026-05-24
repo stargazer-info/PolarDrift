@@ -13,7 +13,7 @@ enum CalibrationStep: Equatable {
 enum DriftMeasureStep {
     case reintroducing(iteration: Int)
     case measuring(iteration: Int)
-    case showingResult(DriftFeedback, iteration: Int)
+    case showingResult(iteration: Int)
 }
 
 // MARK: - SessionStep
@@ -41,9 +41,9 @@ extension CalibrationStep: CustomStringConvertible {
 extension DriftMeasureStep: CustomStringConvertible {
     var description: String {
         switch self {
-        case .reintroducing(let n):         return "reintroducing(iter: \(n))"
-        case .measuring(let n):             return "measuring(iter: \(n))"
-        case .showingResult(let fb, let n): return "showingResult(\(fb), iter: \(n))"
+        case .reintroducing(let n): return "reintroducing(iter: \(n))"
+        case .measuring(let n):     return "measuring(iter: \(n))"
+        case .showingResult(let n): return "showingResult(iter: \(n))"
         }
     }
 }

@@ -77,10 +77,9 @@ final class SessionViewModel<Speech: SpeechManaging> {
                 recorder.recordCalibration(calibration, phase: currentPhase)
             }
 
-        case .driftMeasure(.showingResult(let feedback, let iter)):
+        case .driftMeasure(.showingResult(let iter)):
             recorder.recordRawFrames(iteration: iter, tracker: driftMeasureVM.driftTracker)
             recorder.recordMeasurement(
-                feedback: feedback.recordLabel,
                 iteration: iter,
                 tracker: driftMeasureVM.driftTracker
             )
@@ -103,9 +102,8 @@ final class SessionViewModel<Speech: SpeechManaging> {
     }
 
     private func handleSkip() {
-        guard case .driftMeasure(.showingResult(_, let iter)) = step else { return }
+        guard case .driftMeasure(.showingResult(let iter)) = step else { return }
         recorder.recordMeasurement(
-            feedback: "skipped",
             iteration: iter,
             tracker: driftMeasureVM.driftTracker
         )

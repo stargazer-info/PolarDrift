@@ -49,7 +49,7 @@ final class DriftMeasureViewModel {
             guard let origin = detectedCentroid else { return }
             fixCrosshairAndStartMeasuring(at: origin, iteration: iter, step: step)
 
-        case .showingResult(_, let iter):
+        case .showingResult(let iter):
             step.wrappedValue = .driftMeasure(.reintroducing(iteration: iter + 1))
 
         default:
@@ -138,7 +138,6 @@ final class DriftMeasureViewModel {
         calibration: Binding<DecCalibration?>,
         currentPhase: Binding<AlignmentPhase>
     ) {
-        let prevSlope = driftTracker.previousSlope  // stopTracking より前に読む
         let elapsed = driftTracker.elapsedTime
 
         let iter: Int
@@ -154,14 +153,7 @@ final class DriftMeasureViewModel {
             "測定完了: t=\(String(format: "%.1f", elapsed))s n=\(n) rate=\(String(format: "%.2f", slope*60*scale))px/min(actual) t統計量=\(String(format: "%.2f", tStat)) 有意=\(isSignificant)"
         )
 
-        let feedback: DriftFeedback
-        if let prev = prevSlope {
-            feedback = DriftFeedback.evaluate(current: slope, previous: prev, isSignificant: isSignificant)
-        } else {
-            feedback = isSignificant ? .initial : .complete
-        }
-
-        step.wrappedValue = .driftMeasure(.showingResult(feedback, iteration: iter))
+        step.wrappedValue = .driftMeasure(.showingResult(iteration: iter))
     }
 
     func forceCompletePhase(
@@ -185,7 +177,6 @@ final class DriftMeasureViewModel {
         currentPhase.wrappedValue = next
         calibration.wrappedValue = nil
         driftTracker.calibration = nil
-        driftTracker.previousSlope = nil
         driftTracker.resetHistory()
         Task {
             try? await Task.sleep(for: .seconds(3))

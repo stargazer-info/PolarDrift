@@ -9,7 +9,7 @@ final class SessionRecorder {
         "cal_dec_axis_x,cal_dec_axis_y," +
         "iteration,duration_sec,sample_count," +
         "drift_rate_px_per_min,drift_rate_se_2sigma," +
-        "t_statistic,is_significant,feedback"
+        "t_statistic,is_significant"
 
     private static let rawHeader =
         "session_id,phase,iteration,elapsed_sec," +
@@ -54,7 +54,7 @@ final class SessionRecorder {
         calDecAxisY = Double(cal?.decAxisVector.dy ?? 0)
     }
 
-    func recordMeasurement(feedback: String, iteration: Int, tracker: DriftTracker) {
+    func recordMeasurement(iteration: Int, tracker: DriftTracker) {
         let scale = tracker.imageSize.height > 0 ? tracker.imageSize.height : 720
         let slope = tracker.currentSlope
         let se    = tracker.slopeStdError
@@ -66,7 +66,7 @@ final class SessionRecorder {
             String(format: "%.4f", slope * 60 * scale),
             String(format: "%.4f", se * 60 * scale * 2.0),
             String(format: "%.4f", se > 0 ? slope / se : 0.0),
-            String(tracker.isDriftSignificant), feedback
+            String(tracker.isDriftSignificant)
         ].joined(separator: ",")
         append(line + "\n", to: summaryURL)
     }
