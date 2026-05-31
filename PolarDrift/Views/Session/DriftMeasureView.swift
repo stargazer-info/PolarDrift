@@ -113,6 +113,9 @@ struct DriftMeasureView: View {
                 Text("サンプル数: \(tracker.regression.n)")
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.5))
+                Text(stabilityStatus)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(tracker.isStable ? .green : .white.opacity(0.6))
             } else if tracker.isTracking {
                 Text("計測中…")
                     .font(.cardTitle)
@@ -124,6 +127,14 @@ struct DriftMeasureView: View {
 
     private func driftColor(_ rate: Double) -> Color {
         abs(rate) < 1 ? .green : (rate > 0 ? .driftPositive : .driftNegative)
+    }
+
+    private var stabilityStatus: String {
+        let remaining = tracker.minMeasureDuration - tracker.elapsedTime
+        if remaining > 0 {
+            return String(format: "安定化待ち 残り%.0f秒", remaining)
+        }
+        return tracker.isStable ? "安定 ✓" : "傾き安定化中…"
     }
 
     @ViewBuilder

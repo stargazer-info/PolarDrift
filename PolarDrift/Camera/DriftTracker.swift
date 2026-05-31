@@ -38,6 +38,13 @@ final class DriftTracker {
     private var trackingStartTime: Date?
     private var lastLoggedSecond: Int = -1
 
+    // 傾き安定化（収束）判定用の履歴と定数
+    private(set) var slopeSamples: [(t: Double, ratePxPerMin: Double)] = []
+    let minMeasureDuration: TimeInterval = 90   // 最小計測時間（秒）
+    let stabilityWindow: TimeInterval = 60      // 傾きの安定性を見る直近窓（秒）
+    let stabilitySlopeTol: Double = 1.0         // 直近窓内の傾きばらつき許容（px/分）
+    let maxMeasureDuration: TimeInterval = 300  // 安全上限（秒、ウォーム周期1周を跨げる）
+
     var predictedVelocity: CGVector {
         let recent = recentDisplacements.suffix(3)
         guard recent.count >= 2 else { return .zero }
@@ -58,6 +65,7 @@ final class DriftTracker {
         elapsedTime = 0
         lastLoggedSecond = -1
         rawFrames = []
+        slopeSamples = []
     }
 
     @discardableResult
@@ -103,6 +111,8 @@ final class DriftTracker {
         let sec = Int(elapsedTime)
         if sec > lastLoggedSecond {
             lastLoggedSecond = sec
+            // 傾き安定化判定用にスナップショットを記録
+            slopeSamples.append((t: elapsedTime, ratePxPerMin: currentSlope * 60))
             let ratePx = currentSlope * 60               // 実ピクセル/分
             let sePx   = slopeStdError * 60
             let raPx   = raSlope * 60                     // RA方向ドリフト（px/分、診断用）
@@ -148,7 +158,19 @@ final class DriftTracker {
         return threeSigmaPxPerMin.isFinite && threeSigmaPxPerMin <= 1.0
     }
 
+    // 直近 stabilityWindow 秒で傾き推定が stabilitySlopeTol 以内に収束しているか
+    var isStable: Bool {
+        guard elapsedTime >= stabilityWindow else { return false }
+        let recent = slopeSamples.filter { $0.t >= elapsedTime - stabilityWindow }
+        guard recent.count >= 2 else { return false }
+        let rates = recent.map { $0.ratePxPerMin }
+        guard let lo = rates.min(), let hi = rates.max() else { return false }
+        return (hi - lo) <= stabilitySlopeTol
+    }
+
     var isPhaseComplete: Bool {
-        elapsedTime >= 30 || (isPrecise && elapsedTime >= 5)
+        if elapsedTime >= maxMeasureDuration { return true }   // 安全上限
+        // 統計精度(isPrecise)に加え傾きの収束(isStable)を必須化し、早期終了による系統誤差混入を防ぐ
+        return elapsedTime >= minMeasureDuration && isPrecise && isStable
     }
 }

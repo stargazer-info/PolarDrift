@@ -64,7 +64,8 @@ final class DriftMeasureViewModel {
         calibration: Binding<DecCalibration?>,
         currentPhase: Binding<AlignmentPhase>
     ) {
-        if driftTracker.regression.n >= 30 {
+        // 最小計測時間に達していれば確定、未達ならやり直しを促す（短時間の誤確定を防ぐ）
+        if driftTracker.elapsedTime >= driftTracker.minMeasureDuration {
             finishMeasurement(step: step, calibration: calibration, currentPhase: currentPhase)
         } else {
             driftTracker.resetLost()
