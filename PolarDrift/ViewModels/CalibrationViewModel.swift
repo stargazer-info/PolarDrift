@@ -11,7 +11,8 @@ final class CalibrationViewModel {
 
     private var calibrationOrigin: CGPoint?
     private var calibLastPos: CGPoint?
-    private let decMoveThreshold: CGFloat = 0.10
+    private var calPath: [CGPoint] = []          // Dec軸決定用の移動軌跡（px、主軸フィット用）
+    private let decMoveThreshold: CGFloat = 0.10  // 移動量しきい値（画像幅に対する割合）
     private var detectionTimeoutTask: Task<Void, Never>?
     private var streamTask: Task<Void, Never>?
 
@@ -96,6 +97,8 @@ final class CalibrationViewModel {
         cancelDetectionTimeout()
         calibrationOrigin = centroid
         calibLastPos = centroid
+        // px へ変換して軌跡を初期化
+        calPath = [CGPoint(x: centroid.x * CGFloat(gray.width), y: centroid.y * CGFloat(gray.height))]
         step.wrappedValue = .calibration(.awaitingDecMove(origin: centroid))
     }
 
@@ -113,10 +116,19 @@ final class CalibrationViewModel {
         detectedCentroid = pos
         calibLastPos = pos
 
-        let disp = CGVector(dx: pos.x - origin.x, dy: pos.y - origin.y)
+        // px へ変換して軌跡へ追加
+        let w = CGFloat(gray.width), h = CGFloat(gray.height)
+        let originPx = CGPoint(x: origin.x * w, y: origin.y * h)
+        let posPx = CGPoint(x: pos.x * w, y: pos.y * h)
+        calPath.append(posPx)
+
+        // 移動量判定は px（しきい値は画像幅に対する割合）
+        let disp = CGVector(dx: posPx.x - originPx.x, dy: posPx.y - originPx.y)
         let dist = sqrt(disp.dx * disp.dx + disp.dy * disp.dy)
-        guard dist >= decMoveThreshold else { return }
-        guard let cal = DecCalibration.from(origin: origin, moved: pos) else { return }
+        guard dist >= decMoveThreshold * w else { return }
+        // 移動軌跡の全点から主軸フィットでDec軸を確定（ノイズ平均化で角度誤差を最小化）
+        guard let cal = DecCalibration.from(points: calPath)
+            ?? DecCalibration.from(origin: originPx, moved: posPx) else { return }
         calibration.wrappedValue = cal
         step.wrappedValue = .driftMeasure(.reintroducing(iteration: 1))
     }

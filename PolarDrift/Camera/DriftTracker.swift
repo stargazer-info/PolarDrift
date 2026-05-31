@@ -16,9 +16,11 @@ enum StarTrackingState {
 final class DriftTracker {
     var isTracking = false
     var regression = OnlineRegression()
+    var raRegression = OnlineRegression()  // RA方向ドリフト（診断用）
 
     var currentSlope: Double = 0       // px/秒（符号付き、Dec軸投影済み）
     var slopeStdError: Double = 0
+    var raSlope: Double = 0            // px/秒（RA方向、診断用）
     var isDriftSignificant: Bool = false
     var elapsedTime: TimeInterval = 0  // 計測開始からの経過秒数
 
@@ -30,7 +32,7 @@ final class DriftTracker {
     var trackingState: StarTrackingState = .idle
     var sessionOrigin: CGPoint?        // 測定「スタート」瞬間の位置（十字線固定点）
 
-    private(set) var rawFrames: [(elapsed: Double, x: Double, y: Double, decDisp: Double)] = []
+    private(set) var rawFrames: [(elapsed: Double, x: Double, y: Double, decDisp: Double, raDisp: Double)] = []
 
     private var recentDisplacements: [(CGVector, Date)] = []
     private var trackingStartTime: Date?
@@ -45,11 +47,13 @@ final class DriftTracker {
 
     func startTracking(at origin: CGPoint) {
         regression.reset()
+        raRegression.reset()
         isTracking = true
         trackingStartTime = Date()
         sessionOrigin = origin
         currentSlope = 0
         slopeStdError = 0
+        raSlope = 0
         isDriftSignificant = false
         elapsedTime = 0
         lastLoggedSecond = -1
@@ -59,9 +63,8 @@ final class DriftTracker {
     @discardableResult
     func stopTracking(iteration: Int) -> Double {
         isTracking = false
-        let scale = imageSize.height > 0 ? imageSize.height : 720
-        let ratePx = currentSlope * 60 * scale
-        let sePx = slopeStdError * 60 * scale
+        let ratePx = currentSlope * 60       // currentSlope は px/秒
+        let sePx = slopeStdError * 60
         slopeHistory.append((rate: ratePx, sePxPerMin: sePx, iteration: iteration))
         return currentSlope
     }
@@ -70,9 +73,12 @@ final class DriftTracker {
         guard isTracking, let startTime = trackingStartTime else { return }
         guard let cal = calibration, let origin = sessionOrigin else { return }
 
-        // 変位ベクトルをDec軸に投影
-        let disp = CGVector(dx: point.x - origin.x, dy: point.y - origin.y)
-        let decDisp = cal.decComponent(of: disp)
+        // 重心(正規化)を px に変換し、px変位を Dec軸・RA軸に投影
+        let w = imageSize.width  > 0 ? imageSize.width  : 1280
+        let h = imageSize.height > 0 ? imageSize.height : 720
+        let dispPx = CGVector(dx: (point.x - origin.x) * w, dy: (point.y - origin.y) * h)
+        let decDisp = cal.decComponent(of: dispPx)
+        let raDisp = cal.raComponent(of: dispPx)
 
         // 速度予測用に直近変位を記録
         if case .tracking(let last) = trackingState {
@@ -84,26 +90,27 @@ final class DriftTracker {
 
         let t = time.timeIntervalSince(startTime)
         elapsedTime = t
-        rawFrames.append((elapsed: t, x: Double(point.x), y: Double(point.y), decDisp: Double(decDisp)))
+        rawFrames.append((elapsed: t, x: Double(point.x), y: Double(point.y), decDisp: Double(decDisp), raDisp: Double(raDisp)))
         regression.add(t: t, y: Double(decDisp))
+        raRegression.add(t: t, y: Double(raDisp))
 
         currentSlope = regression.slope
         slopeStdError = regression.slopeStdError
-        // 統計的有意 かつ 実ピクセル換算で 1 px/分超過の両方を満たす場合のみ有意とする
-        let threshold = imageSize.height > 0 ? 1.0 / imageSize.height : 1.0 / 720
-        isDriftSignificant = regression.isSignificant && abs(currentSlope * 60) >= threshold
+        raSlope = raRegression.slope
+        // 統計的有意 かつ 1 px/分超過の両方を満たす場合のみ有意とする（currentSlope は px/秒）
+        isDriftSignificant = regression.isSignificant && abs(currentSlope * 60) >= 1.0
 
         let sec = Int(elapsedTime)
         if sec > lastLoggedSecond {
             lastLoggedSecond = sec
-            let scale  = imageSize.height > 0 ? imageSize.height : 720
-            let ratePx = currentSlope * 60 * scale       // 実ピクセル/分
-            let sePx   = slopeStdError * 60 * scale
+            let ratePx = currentSlope * 60               // 実ピクセル/分
+            let sePx   = slopeStdError * 60
+            let raPx   = raSlope * 60                     // RA方向ドリフト（px/分、診断用）
             let tStat  = slopeStdError > 0 ? currentSlope / slopeStdError : 0
-            let xPx    = imageSize.width  > 0 ? point.x * imageSize.width  : point.x
-            let yPx    = imageSize.height > 0 ? point.y * imageSize.height : point.y
+            let xPx    = point.x * w
+            let yPx    = point.y * h
             driftLogger.info(
-                "t=\(sec)s n=\(self.regression.n) pos=(\(String(format: "%.1f", xPx)),\(String(format: "%.1f", yPx)))px rate=\(String(format: "%.2f", ratePx))±\(String(format: "%.2f", sePx*3))px/min(3σ) t=\(String(format: "%.2f", tStat)) sig=\(self.isDriftSignificant) precise=\(self.isPrecise)"
+                "t=\(sec)s n=\(self.regression.n) pos=(\(String(format: "%.1f", xPx)),\(String(format: "%.1f", yPx)))px rate=\(String(format: "%.2f", ratePx))±\(String(format: "%.2f", sePx*3))px/min(3σ) RA=\(String(format: "%.2f", raPx))px/min t=\(String(format: "%.2f", tStat)) sig=\(self.isDriftSignificant) precise=\(self.isPrecise)"
             )
         }
     }
@@ -134,11 +141,10 @@ final class DriftTracker {
         slopeHistory = []
     }
 
-    // 3σ ≤ 1 px/分 を満たすかどうか
+    // 3σ ≤ 1 px/分 を満たすかどうか（slopeStdError は px/秒）
     var isPrecise: Bool {
         guard regression.n >= 10 else { return false }
-        let h = imageSize.height > 0 ? imageSize.height : 720
-        let threeSigmaPxPerMin = slopeStdError * 60 * h * 3
+        let threeSigmaPxPerMin = slopeStdError * 60 * 3
         return threeSigmaPxPerMin.isFinite && threeSigmaPxPerMin <= 1.0
     }
 

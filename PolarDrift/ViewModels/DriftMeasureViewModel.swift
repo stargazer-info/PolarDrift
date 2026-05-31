@@ -148,9 +148,9 @@ final class DriftMeasureViewModel {
         let n = driftTracker.regression.n
         let se = driftTracker.slopeStdError
         let tStat = se > 0 ? slope / se : 0
-        let scale = Double(driftTracker.imageSize.height > 0 ? driftTracker.imageSize.height : 720)
+        let raRate = driftTracker.raSlope * 60
         driftLogger.info(
-            "測定完了: t=\(String(format: "%.1f", elapsed))s n=\(n) rate=\(String(format: "%.2f", slope*60*scale))px/min(actual) t統計量=\(String(format: "%.2f", tStat)) 有意=\(isSignificant)"
+            "測定完了: t=\(String(format: "%.1f", elapsed))s n=\(n) rate=\(String(format: "%.2f", slope*60))px/min(actual) RA=\(String(format: "%.2f", raRate))px/min t統計量=\(String(format: "%.2f", tStat)) 有意=\(isSignificant)"
         )
 
         step.wrappedValue = .driftMeasure(.showingResult(iteration: iter))

@@ -9,11 +9,12 @@ final class SessionRecorder {
         "cal_dec_axis_x,cal_dec_axis_y," +
         "iteration,duration_sec,sample_count," +
         "drift_rate_px_per_min,drift_rate_se_2sigma," +
+        "ra_drift_rate_px_per_min," +
         "t_statistic,is_significant"
 
     private static let rawHeader =
         "session_id,phase,iteration,elapsed_sec," +
-        "x_px,y_px,dec_disp_px,image_width,image_height"
+        "x_px,y_px,dec_disp_px,ra_disp_px,image_width,image_height"
 
     // MARK: - 状態
 
@@ -55,16 +56,17 @@ final class SessionRecorder {
     }
 
     func recordMeasurement(iteration: Int, tracker: DriftTracker) {
-        let scale = tracker.imageSize.height > 0 ? tracker.imageSize.height : 720
-        let slope = tracker.currentSlope
+        let slope = tracker.currentSlope   // px/秒
         let se    = tracker.slopeStdError
+        let raSlope = tracker.raSlope
         let line = [
             sessionId, sessionStart, currentPhase,
             String(calDecAxisX), String(calDecAxisY),
             String(iteration), String(format: "%.3f", tracker.elapsedTime),
             String(tracker.regression.n),
-            String(format: "%.4f", slope * 60 * scale),
-            String(format: "%.4f", se * 60 * scale * 2.0),
+            String(format: "%.4f", slope * 60),
+            String(format: "%.4f", se * 60 * 2.0),
+            String(format: "%.4f", raSlope * 60),
             String(format: "%.4f", se > 0 ? slope / se : 0.0),
             String(tracker.isDriftSignificant)
         ].joined(separator: ",")
@@ -80,11 +82,12 @@ final class SessionRecorder {
         let lines: [String] = tracker.rawFrames.map { frame in
             let xPx       = String(format: "%.3f", frame.x       * w)
             let yPx       = String(format: "%.3f", frame.y       * h)
-            let decPx     = String(format: "%.3f", frame.decDisp * h)
+            let decPx     = String(format: "%.3f", frame.decDisp)   // 既に px
+            let raPx      = String(format: "%.3f", frame.raDisp)    // 既に px
             let elapsed   = String(format: "%.6f", frame.elapsed)
             let fields: [String] = [
                 sessionId, currentPhase, iterStr,
-                elapsed, xPx, yPx, decPx, wStr, hStr
+                elapsed, xPx, yPx, decPx, raPx, wStr, hStr
             ]
             return fields.joined(separator: ",")
         }
