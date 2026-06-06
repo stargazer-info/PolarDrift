@@ -12,7 +12,7 @@ final class CameraManager: NSObject {
         let session = AVCaptureSession()
         session.sessionPreset = .hd1280x720
 
-        guard let cam = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
+        guard let cam = makeCamera(),
               let input = try? AVCaptureDeviceInput(device: cam) else { return }
 
         camera = cam
@@ -24,14 +24,53 @@ final class CameraManager: NSObject {
         output.alwaysDiscardsLateVideoFrames = true
         if session.canAddOutput(output) { session.addOutput(output) }
 
+        // 手ブレ補正は画像をワープ/シフトしてドリフトを相殺・汚染するため明示的に無効化
+        #if os(iOS)
+        if let conn = output.connection(with: .video), conn.isVideoStabilizationSupported {
+            conn.preferredVideoStabilizationMode = .off
+        }
+        #endif
+
         let layer = AVCaptureVideoPreviewLayer(session: session)
         layer.videoGravity = .resizeAspectFill
         previewLayer = layer
 
         captureSession = session
+    }
 
-        // afocal撮影のためフォーカスを無限遠に固定（start前なので起動時のAFハンチングも回避）
-        lockFocusInfinity()
+    /// バックワイドカメラを生成し、計測用のデバイス設定を一括適用して返す。
+    /// - 無限遠フォーカス固定（接眼レンズは無限遠に像を作るため。AFハンチング防止）
+    /// - ホワイトバランスを中立ゲインで固定（AWBのゲイン変動による輝度ちらつき防止）
+    /// ピント微調整は望遠鏡のフォーカサー側で行う。露出は setExposure で別途適用。
+    private func makeCamera() -> AVCaptureDevice? {
+        guard let cam = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back) else {
+            return nil
+        }
+        guard (try? cam.lockForConfiguration()) != nil else { return cam }
+        defer { cam.unlockForConfiguration() }
+
+        #if os(iOS)
+        if cam.isLockingFocusWithCustomLensPositionSupported {
+            cam.setFocusModeLocked(lensPosition: 1.0, completionHandler: nil)  // 1.0 = 最遠 ≒ 無限遠
+        } else if cam.isFocusModeSupported(.locked) {
+            cam.focusMode = .locked
+        }
+        if cam.isWhiteBalanceModeSupported(.locked) {
+            // 昼光色温度(約5200K)相当で固定。AWBのように時間変動しない一方、
+            // 中立ゲイン(1,1,1)のようなセンサー素の緑かぶりも避け自然な色味にする。
+            let tnt = AVCaptureDevice.WhiteBalanceTemperatureAndTintValues(temperature: 5200, tint: 0)
+            var gains = cam.deviceWhiteBalanceGains(for: tnt)
+            let maxG = cam.maxWhiteBalanceGain
+            gains.redGain   = min(max(1.0, gains.redGain),   maxG)
+            gains.greenGain = min(max(1.0, gains.greenGain), maxG)
+            gains.blueGain  = min(max(1.0, gains.blueGain),  maxG)
+            cam.setWhiteBalanceModeLocked(with: gains, completionHandler: nil)
+        }
+        #else
+        if cam.isFocusModeSupported(.locked) { cam.focusMode = .locked }
+        #endif
+
+        return cam
     }
 
     func start() {
@@ -41,24 +80,6 @@ final class CameraManager: NSObject {
 
     func stop() {
         captureSession?.stopRunning()
-    }
-
-    /// コリメート(afocal)撮影では接眼レンズが無限遠に像を作るため、
-    /// レンズ位置を無限遠(1.0)へ固定しAFのハンチングによる重心ブレを防ぐ。
-    /// ピント微調整は望遠鏡のフォーカサー側で行う。
-    func lockFocusInfinity() {
-        guard let cam = camera else { return }
-        guard (try? cam.lockForConfiguration()) != nil else { return }
-        #if os(iOS)
-        if cam.isLockingFocusWithCustomLensPositionSupported {
-            cam.setFocusModeLocked(lensPosition: 1.0, completionHandler: nil)  // 1.0 = 最遠 ≒ 無限遠
-        } else if cam.isFocusModeSupported(.locked) {
-            cam.focusMode = .locked
-        }
-        #else
-        if cam.isFocusModeSupported(.locked) { cam.focusMode = .locked }
-        #endif
-        cam.unlockForConfiguration()
     }
 
     func setExposure(denominator: Int, iso: Float) {

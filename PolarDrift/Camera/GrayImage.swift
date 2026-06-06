@@ -21,7 +21,7 @@ struct GrayImage {
         let result: GrayImage? = grayData.withUnsafeMutableBufferPointer { ptr in
             var dstBuffer = vImage_Buffer(data: ptr.baseAddress!, height: vImagePixelCount(h),
                                           width: vImagePixelCount(w), rowBytes: w)
-            let matrix: [Int16] = [0, 77, 150, 29]  // BGRA: skip A, weight B/G/R (BT.601)
+            let matrix: [Int16] = [29, 150, 77, 0]  // メモリ配置BGRA順の重み: B=29,G=150,R=77,A=0 (BT.601)
             let err = vImageMatrixMultiply_ARGB8888ToPlanar8(&srcBuffer, &dstBuffer,
                                                               matrix, 256, nil, 0,
                                                               vImage_Flags(kvImageNoFlags))

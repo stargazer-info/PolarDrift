@@ -54,7 +54,8 @@ final class SessionViewModel<Speech: SpeechManaging> {
     func setup() async {
         await speech.requestPermissions()
         let layer = await Task { @CameraActor in
-            self.cameraManager.setup()   // フォーカス無限遠固定も内部で実施
+            self.cameraManager.setup()   // フォーカス無限遠固定・WBロックも内部で実施
+            self.cameraManager.setExposure(denominator: self.cameraShutterDenominator, iso: self.cameraISO)  // start前にカスタム露出を適用（didSet未発火対策）
             self.cameraManager.start()
             return self.cameraManager.previewLayer
         }.value
