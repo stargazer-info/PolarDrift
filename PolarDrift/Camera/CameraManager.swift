@@ -29,6 +29,9 @@ final class CameraManager: NSObject {
         previewLayer = layer
 
         captureSession = session
+
+        // afocal撮影のためフォーカスを無限遠に固定（start前なので起動時のAFハンチングも回避）
+        lockFocusInfinity()
     }
 
     func start() {
@@ -40,10 +43,21 @@ final class CameraManager: NSObject {
         captureSession?.stopRunning()
     }
 
-    func lockFocus() {
+    /// コリメート(afocal)撮影では接眼レンズが無限遠に像を作るため、
+    /// レンズ位置を無限遠(1.0)へ固定しAFのハンチングによる重心ブレを防ぐ。
+    /// ピント微調整は望遠鏡のフォーカサー側で行う。
+    func lockFocusInfinity() {
         guard let cam = camera else { return }
-        try? cam.lockForConfiguration()
+        guard (try? cam.lockForConfiguration()) != nil else { return }
+        #if os(iOS)
+        if cam.isLockingFocusWithCustomLensPositionSupported {
+            cam.setFocusModeLocked(lensPosition: 1.0, completionHandler: nil)  // 1.0 = 最遠 ≒ 無限遠
+        } else if cam.isFocusModeSupported(.locked) {
+            cam.focusMode = .locked
+        }
+        #else
         if cam.isFocusModeSupported(.locked) { cam.focusMode = .locked }
+        #endif
         cam.unlockForConfiguration()
     }
 
