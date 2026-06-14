@@ -37,6 +37,8 @@ final class DriftTracker {
     private var recentDisplacements: [(CGVector, Date)] = []
     private var trackingStartTime: Date?
     private var lastLoggedSecond: Int = -1
+    private var lastGoodFrameTime: Date?        // 直近に星を捉えたフレーム時刻（ロスト判定を時間ベースにするため）
+    let lostTimeout: TimeInterval = 3.0         // この秒数捉えられなければロスト確定（fps非依存）
 
     // 傾き安定化（収束）判定用の履歴と定数
     private(set) var slopeSamples: [(t: Double, ratePxPerMin: Double)] = []
@@ -64,6 +66,7 @@ final class DriftTracker {
         isDriftSignificant = false
         elapsedTime = 0
         lastLoggedSecond = -1
+        lastGoodFrameTime = nil
         rawFrames = []
         slopeSamples = []
     }
@@ -98,6 +101,7 @@ final class DriftTracker {
 
         let t = time.timeIntervalSince(startTime)
         elapsedTime = t
+        lastGoodFrameTime = time
         rawFrames.append((elapsed: t, x: Double(point.x), y: Double(point.y), decDisp: Double(decDisp), raDisp: Double(raDisp)))
         regression.add(t: t, y: Double(decDisp))
         raRegression.add(t: t, y: Double(raDisp))
@@ -131,11 +135,11 @@ final class DriftTracker {
         case .tracking:
             trackingState = .searching(framesLost: 1)
         case .searching(let n):
-            let next = n + 1
-            if next >= 90 {  // 3秒 @30fps
+            // fps可変（長秒露光で低fps化）に対応し、フレーム数でなく実時間でロスト判定する
+            if let last = lastGoodFrameTime, Date().timeIntervalSince(last) >= lostTimeout {
                 trackingState = .lostAlert
             } else {
-                trackingState = .searching(framesLost: next)
+                trackingState = .searching(framesLost: n + 1)
             }
         default:
             break

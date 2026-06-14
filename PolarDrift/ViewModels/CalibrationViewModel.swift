@@ -11,6 +11,7 @@ final class CalibrationViewModel {
 
     private var calibrationOrigin: CGPoint?
     private var calibLastPos: CGPoint?
+    private var calibPrevPos: CGPoint?          // 1つ前の位置（予測速度の算出用）
     private var calPath: [CGPoint] = []          // Dec軸決定用の移動軌跡（px、主軸フィット用）
     private let decMoveThreshold: CGFloat = 0.10  // 移動量しきい値（画像幅に対する割合）
     private var detectionTimeoutTask: Task<Void, Never>?
@@ -97,6 +98,7 @@ final class CalibrationViewModel {
         cancelDetectionTimeout()
         calibrationOrigin = centroid
         calibLastPos = centroid
+        calibPrevPos = nil
         // px へ変換して軌跡を初期化
         calPath = [CGPoint(x: centroid.x * CGFloat(gray.width), y: centroid.y * CGFloat(gray.height))]
         step.wrappedValue = .calibration(.awaitingDecMove(origin: centroid))
@@ -109,15 +111,21 @@ final class CalibrationViewModel {
         calibration: Binding<DecCalibration?>
     ) {
         guard let last = calibLastPos else { return }
+        let w = CGFloat(gray.width), h = CGFloat(gray.height)
+        // 直近2点から予測速度（px/フレーム）を求め、低fpsでフレーム間移動が大きくても追跡ROIに収める
+        var predicted = CGVector.zero
+        if let prev = calibPrevPos {
+            predicted = CGVector(dx: (last.x - prev.x) * w, dy: (last.y - prev.y) * h)
+        }
         guard let pos = frameProcessor.trackCentroid(
             in: gray, lastPosition: last,
-            predictedVelocity: .zero, searchRadius: 60
+            predictedVelocity: predicted, searchRadius: 80
         ) else { return }
         detectedCentroid = pos
+        calibPrevPos = last
         calibLastPos = pos
 
         // px へ変換して軌跡へ追加
-        let w = CGFloat(gray.width), h = CGFloat(gray.height)
         let originPx = CGPoint(x: origin.x * w, y: origin.y * h)
         let posPx = CGPoint(x: pos.x * w, y: pos.y * h)
         calPath.append(posPx)

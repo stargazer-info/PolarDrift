@@ -69,6 +69,20 @@ struct SessionView: View {
                 }
             }
             .animation(.easeInOut(duration: 0.35), value: stepID)
+
+            if showsCameraControls {
+                VStack {
+                    Spacer()
+                    CameraControlsView(
+                        measureExposureSec: $session.measureExposureSec,
+                        measureISO: $session.measureISO,
+                        calibExposureSec: $session.calibExposureSec,
+                        calibISO: $session.calibISO,
+                        minContrast: $session.minContrast
+                    )
+                }
+                .ignoresSafeArea(.keyboard)
+            }
         }
         .environment(viewModel)
         .task { await viewModel.setup() }
@@ -80,6 +94,14 @@ struct SessionView: View {
                 viewModel.startSession()
                 shouldStartNewSession = false
             }
+        }
+    }
+
+    // 露出調整UIはカメラを使う較正・計測中のみ表示する
+    private var showsCameraControls: Bool {
+        switch viewModel.step {
+        case .calibration, .driftMeasure: return true
+        default: return false
         }
     }
 

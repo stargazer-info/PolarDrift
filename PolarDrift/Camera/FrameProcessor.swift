@@ -3,7 +3,7 @@ import CoreGraphics
 struct FrameProcessor {
     var minContrast: Float = 0.25
     var minBlobPixels: Int = 1
-    var maxBlobPixels: Int = 200
+    var maxBlobPixels: Int = 400  // 長秒露光の星像肥大・キャリブ時の軽微なストリークを吸収
 
     func detectInitialCentroid(in gray: GrayImage) -> CGPoint? {
         findCentroid(in: gray, roi: CGRect(x: 0.1, y: 0.1, width: 0.8, height: 0.8))

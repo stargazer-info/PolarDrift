@@ -82,18 +82,50 @@ final class CameraManager: NSObject {
         captureSession?.stopRunning()
     }
 
-    func setExposure(denominator: Int, iso: Float) {
+    /// 露光時間（秒）とISOでカスタム露出を設定する。
+    /// 計測相は長秒（〜1s）、キャリブ相は控えめ露光を渡す想定。
+    /// 露光長・ISO・フレーム間隔はいずれもフォーマットの対応範囲にクランプする。
+    func setExposure(seconds: Double, iso: Float) {
         guard let cam = camera else { return }
-        try? cam.lockForConfiguration()
+        guard (try? cam.lockForConfiguration()) != nil else { return }
+        defer { cam.unlockForConfiguration() }
         #if os(iOS)
-        if cam.isExposureModeSupported(.custom) {
-            let duration = CMTimeMake(value: 1, timescale: CMTimeScale(denominator))
-            let clampedISO = min(max(iso, cam.activeFormat.minISO), cam.activeFormat.maxISO)
-            cam.setExposureModeCustom(duration: duration, iso: clampedISO)
+        guard cam.isExposureModeSupported(.custom) else { return }
+        let fmt = cam.activeFormat
+        let minD = CMTimeGetSeconds(fmt.minExposureDuration)
+        let maxD = CMTimeGetSeconds(fmt.maxExposureDuration)
+        let clamped = min(max(seconds, minD), maxD)
+        let duration = CMTime(seconds: clamped, preferredTimescale: 1_000_000)
+        let clampedISO = min(max(iso, fmt.minISO), fmt.maxISO)
+
+        // 長秒露光ではfpsを露光長に合わせて落とし、フレーム供給を安定させる。
+        // フレーム間隔はフォーマットの対応レンジへ必ずクランプする（範囲外設定は例外で即クラッシュするため）。
+        // 端数は CMTime の丸めで境界をわずかに超えると弾かれるので、CMTimeCompare でレンジ端の実値にスナップする。
+        if let range = frameRateRange(in: fmt, forFrameSeconds: clamped) {
+            var frameDur = CMTime(seconds: clamped, preferredTimescale: 600)
+            if CMTimeCompare(frameDur, range.minFrameDuration) < 0 { frameDur = range.minFrameDuration }
+            if CMTimeCompare(frameDur, range.maxFrameDuration) > 0 { frameDur = range.maxFrameDuration }
+            cam.activeVideoMinFrameDuration = frameDur
+            cam.activeVideoMaxFrameDuration = frameDur
         }
+
+        cam.setExposureModeCustom(duration: duration, iso: clampedISO)
         #endif
-        cam.unlockForConfiguration()
     }
+
+    #if os(iOS)
+    /// 指定フレーム秒を収められるフレームレートレンジを選ぶ。含むレンジが無ければ最も長秒（低fps）側を返す。
+    private func frameRateRange(in format: AVCaptureDevice.Format, forFrameSeconds sec: Double) -> AVFrameRateRange? {
+        let ranges = format.videoSupportedFrameRateRanges
+        if let containing = ranges.first(where: {
+            sec >= CMTimeGetSeconds($0.minFrameDuration) - 1e-6 &&
+            sec <= CMTimeGetSeconds($0.maxFrameDuration) + 1e-6
+        }) {
+            return containing
+        }
+        return ranges.max(by: { CMTimeGetSeconds($0.maxFrameDuration) < CMTimeGetSeconds($1.maxFrameDuration) })
+    }
+    #endif
 
     /// 呼び出すたびに前のストリームを終了し新しいストリームを返す
     func makeGrayImageStream() -> AsyncStream<GrayImage> {
