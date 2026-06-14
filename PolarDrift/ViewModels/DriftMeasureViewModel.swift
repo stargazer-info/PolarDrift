@@ -75,6 +75,16 @@ final class DriftMeasureViewModel {
         }
     }
 
+    // 周期確認モード（デバッグ）：計測中に手動で計測を打ち切る
+    func stopMeasurementManually(
+        step: Binding<SessionStep>,
+        calibration: Binding<DecCalibration?>,
+        currentPhase: Binding<AlignmentPhase>
+    ) {
+        guard case .driftMeasure(.measuring) = step.wrappedValue else { return }
+        finishMeasurement(step: step, calibration: calibration, currentPhase: currentPhase)
+    }
+
     func handleLostStarRestart(step: Binding<SessionStep>) {
         driftTracker.resetLost()
         if case .driftMeasure(.measuring(let n)) = step.wrappedValue {

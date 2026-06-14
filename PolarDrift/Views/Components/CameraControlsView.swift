@@ -6,8 +6,13 @@ struct CameraControlsView: View {
     @Binding var calibExposureSec: Double
     @Binding var calibISO: Float
     @Binding var minContrast: Float
+    @Binding var diagnosticMode: Bool
+    @Binding var diagnosticDurationMin: Int
 
     @State private var isExpanded = false
+
+    // 周期確認モードの固定上限候補（分）
+    private let diagnosticDurationOptions: [Int] = [15, 20, 30]
 
     // 計測相は長秒まで許可（星は静止）。キャリブ相はストリーク抑制のため上限を抑える。
     private let measureExposureOptions: [Double] = [1.0/250, 1.0/120, 1.0/60, 1.0/30, 1.0/15, 1.0/8, 1.0/4, 1.0/2, 1.0]
@@ -52,12 +57,47 @@ struct CameraControlsView: View {
                     LabeledSlider(label: "コントラスト", value: $minContrast,
                                   range: 0.05...0.6, step: 0.05,
                                   format: { String(format: "%.2f", $0) })
+
+                    #if DEBUG
+                    Divider().overlay(Color.white.opacity(0.15))
+                    diagnosticSection
+                    #endif
                 }
                 .padding(16)
                 .background(Color.astronomyCard)
             }
         }
     }
+
+    #if DEBUG
+    private var diagnosticSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Toggle("周期確認モード（デバッグ）", isOn: $diagnosticMode)
+                .font(.caption)
+                .foregroundStyle(.white.opacity(0.7))
+                .tint(Color.astronomyAccent)
+            if diagnosticMode {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("固定上限")
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.7))
+                    HStack(spacing: 6) {
+                        ForEach(diagnosticDurationOptions, id: \.self) { min in
+                            let isSel = min == diagnosticDurationMin
+                            Button("\(min)分") { diagnosticDurationMin = min }
+                                .font(.caption.monospaced())
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(isSel ? Color.astronomyAccent.opacity(0.3) : Color.astronomyBackground,
+                                            in: RoundedRectangle(cornerRadius: 6))
+                                .foregroundStyle(isSel ? Color.astronomyAccent : .white.opacity(0.7))
+                        }
+                    }
+                }
+            }
+        }
+    }
+    #endif
 
     @ViewBuilder
     private func exposureSection(title: String, options: [Double], selection: Binding<Double>) -> some View {

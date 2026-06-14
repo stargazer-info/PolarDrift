@@ -47,6 +47,11 @@ final class DriftTracker {
     let stabilitySlopeTol: Double = 1.0         // 直近窓内の傾きばらつき許容（px/分）
     let maxMeasureDuration: TimeInterval = 300  // 安全上限（秒、ウォーム周期1周を跨げる）
 
+    // 周期確認モード（デバッグ専用）：収束ゲートを無効化し固定上限まで1本を連続計測する。
+    // startTracking ではリセットしない（設定値として計測をまたいで保持する）。
+    var diagnosticMode: Bool = false
+    var diagnosticDuration: TimeInterval = 1200  // 固定上限（秒、既定20分。15/20/30分で可変）
+
     var predictedVelocity: CGVector {
         let recent = recentDisplacements.suffix(3)
         guard recent.count >= 2 else { return .zero }
@@ -173,6 +178,8 @@ final class DriftTracker {
     }
 
     var isPhaseComplete: Bool {
+        // 周期確認モードでは収束で早期終了せず固定上限（または手動停止）まで連続計測する
+        if diagnosticMode { return elapsedTime >= diagnosticDuration }
         if elapsedTime >= maxMeasureDuration { return true }   // 安全上限
         // 統計精度(isPrecise)に加え傾きの収束(isStable)を必須化し、早期終了による系統誤差混入を防ぐ
         return elapsedTime >= minMeasureDuration && isPrecise && isStable

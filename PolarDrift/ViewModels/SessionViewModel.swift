@@ -43,6 +43,14 @@ final class SessionViewModel<Speech: SpeechManaging> {
         }
     }
 
+    // 周期確認モード（デバッグ専用）。UI露出は #if DEBUG だが、プロパティ自体は全ビルドに置く。
+    var diagnosticMode: Bool = false {
+        didSet { driftMeasureVM.driftTracker.diagnosticMode = diagnosticMode }
+    }
+    var diagnosticDurationMin: Int = 20 {
+        didSet { driftMeasureVM.driftTracker.diagnosticDuration = TimeInterval(diagnosticDurationMin * 60) }
+    }
+
     // MARK: - 子VM
     let calibrationVM  = CalibrationViewModel()
     let driftMeasureVM = DriftMeasureViewModel()
@@ -178,6 +186,9 @@ final class SessionViewModel<Speech: SpeechManaging> {
 
     func startDriftStream() {
         @Bindable var this = self
+        // 周期確認モード設定をストリーム開始前に明示適用（didSet未発火・トグル順序対策）
+        driftMeasureVM.driftTracker.diagnosticMode = diagnosticMode
+        driftMeasureVM.driftTracker.diagnosticDuration = TimeInterval(diagnosticDurationMin * 60)
         let (sec, iso) = exposureSettings(for: .driftMeasure(.reintroducing(iteration: 1)))
         Task { @CameraActor in
             self.cameraManager.setExposure(seconds: sec, iso: iso)   // 計測露光（長秒・低ISO）

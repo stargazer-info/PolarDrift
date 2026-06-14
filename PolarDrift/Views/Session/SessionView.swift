@@ -78,7 +78,9 @@ struct SessionView: View {
                         measureISO: $session.measureISO,
                         calibExposureSec: $session.calibExposureSec,
                         calibISO: $session.calibISO,
-                        minContrast: $session.minContrast
+                        minContrast: $session.minContrast,
+                        diagnosticMode: $session.diagnosticMode,
+                        diagnosticDurationMin: $session.diagnosticDurationMin
                     )
                 }
                 .ignoresSafeArea(.keyboard)

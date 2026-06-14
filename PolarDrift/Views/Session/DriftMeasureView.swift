@@ -130,6 +130,13 @@ struct DriftMeasureView: View {
     }
 
     private var stabilityStatus: String {
+        #if DEBUG
+        if tracker.diagnosticMode {
+            let e = Int(tracker.elapsedTime)
+            let capMin = Int((tracker.diagnosticDuration / 60).rounded())
+            return String(format: "周期確認モード 経過 %d:%02d ／ 上限 %d分", e / 60, e % 60, capMin)
+        }
+        #endif
         let remaining = tracker.minMeasureDuration - tracker.elapsedTime
         if remaining > 0 {
             return String(format: "安定化待ち 残り%.0f秒", remaining)
@@ -148,6 +155,19 @@ struct DriftMeasureView: View {
 
             case .driftMeasure(.measuring):
                 instructionText("望遠鏡を動かさないでください")
+                #if DEBUG
+                if tracker.diagnosticMode {
+                    Button("計測停止") {
+                        vm.stopMeasurementManually(
+                            step: $step,
+                            calibration: $calibration,
+                            currentPhase: $currentPhase
+                        )
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.orange)
+                }
+                #endif
                 VoiceStatusBadge(isListening: isListening,
                                  expectedCommand: nil)
 
