@@ -29,7 +29,7 @@ struct DriftMeasureView: View {
                 phaseHeader
                     .padding(.horizontal, 16)
                     .padding(.top, 8)
-                if case .driftMeasure(.showingResult) = step, !tracker.slopeHistory.isEmpty {
+                if case .driftMeasure(.showingResult) = step, !vm.slopeHistory.isEmpty {
                     historyCard
                         .padding(.horizontal, 16)
                         .padding(.top, 8)
@@ -193,7 +193,7 @@ struct DriftMeasureView: View {
 
     private var historyCard: some View {
         VStack(spacing: 2) {
-            ForEach(tracker.slopeHistory.suffix(3).reversed(), id: \.iteration) { entry in
+            ForEach(vm.slopeHistory.suffix(3).reversed(), id: \.iteration) { entry in
                 HStack {
                     Text("測定\(entry.iteration)")
                         .font(.caption2).foregroundStyle(.white.opacity(0.5))

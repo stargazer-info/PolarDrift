@@ -20,11 +20,7 @@ final class SpeechRecognitionManager: NSObject, SpeechManaging {
             }
         }
         guard speech else { return false }
-        #if os(iOS)
         return await AVAudioApplication.requestRecordPermission()
-        #else
-        return true
-        #endif
     }
 
     func startListening() {

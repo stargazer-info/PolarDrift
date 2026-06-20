@@ -25,11 +25,9 @@ final class CameraManager: NSObject {
         if session.canAddOutput(output) { session.addOutput(output) }
 
         // 手ブレ補正は画像をワープ/シフトしてドリフトを相殺・汚染するため明示的に無効化
-        #if os(iOS)
         if let conn = output.connection(with: .video), conn.isVideoStabilizationSupported {
             conn.preferredVideoStabilizationMode = .off
         }
-        #endif
 
         let layer = AVCaptureVideoPreviewLayer(session: session)
         layer.videoGravity = .resizeAspectFill
@@ -49,7 +47,6 @@ final class CameraManager: NSObject {
         guard (try? cam.lockForConfiguration()) != nil else { return cam }
         defer { cam.unlockForConfiguration() }
 
-        #if os(iOS)
         if cam.isLockingFocusWithCustomLensPositionSupported {
             cam.setFocusModeLocked(lensPosition: 1.0, completionHandler: nil)  // 1.0 = 最遠 ≒ 無限遠
         } else if cam.isFocusModeSupported(.locked) {
@@ -66,9 +63,6 @@ final class CameraManager: NSObject {
             gains.blueGain  = min(max(1.0, gains.blueGain),  maxG)
             cam.setWhiteBalanceModeLocked(with: gains, completionHandler: nil)
         }
-        #else
-        if cam.isFocusModeSupported(.locked) { cam.focusMode = .locked }
-        #endif
 
         return cam
     }
@@ -89,7 +83,6 @@ final class CameraManager: NSObject {
         guard let cam = camera else { return }
         guard (try? cam.lockForConfiguration()) != nil else { return }
         defer { cam.unlockForConfiguration() }
-        #if os(iOS)
         guard cam.isExposureModeSupported(.custom) else { return }
         let fmt = cam.activeFormat
         let minD = CMTimeGetSeconds(fmt.minExposureDuration)
@@ -110,10 +103,8 @@ final class CameraManager: NSObject {
         }
 
         cam.setExposureModeCustom(duration: duration, iso: clampedISO)
-        #endif
     }
 
-    #if os(iOS)
     /// 指定フレーム秒を収められるフレームレートレンジを選ぶ。含むレンジが無ければ最も長秒（低fps）側を返す。
     private func frameRateRange(in format: AVCaptureDevice.Format, forFrameSeconds sec: Double) -> AVFrameRateRange? {
         let ranges = format.videoSupportedFrameRateRanges
@@ -125,7 +116,6 @@ final class CameraManager: NSObject {
         }
         return ranges.max(by: { CMTimeGetSeconds($0.maxFrameDuration) < CMTimeGetSeconds($1.maxFrameDuration) })
     }
-    #endif
 
     /// 呼び出すたびに前のストリームを終了し新しいストリームを返す
     func makeGrayImageStream() -> AsyncStream<GrayImage> {

@@ -11,6 +11,7 @@ final class DriftMeasureViewModel {
     let driftTracker = DriftTracker()
     var detectedCentroid: CGPoint?
     var frameProcessor = FrameProcessor()
+    private(set) var slopeHistory: [(rate: Double, sePxPerMin: Double, iteration: Int)] = []
 
     private var streamTask: Task<Void, Never>?
 
@@ -154,12 +155,13 @@ final class DriftMeasureViewModel {
         let iter: Int
         if case .driftMeasure(.measuring(let n)) = step.wrappedValue { iter = n } else { iter = 1 }
 
-        let slope = driftTracker.stopTracking(iteration: iter)
+        let slope = driftTracker.stopTracking()
         let isSignificant = driftTracker.isDriftSignificant
         let n = driftTracker.regression.n
         let se = driftTracker.slopeStdError
         let tStat = se > 0 ? slope / se : 0
         let raRate = driftTracker.raSlope * 60
+        slopeHistory.append((rate: slope * 60, sePxPerMin: se * 60, iteration: iter))
         driftLogger.info(
             "測定完了: t=\(String(format: "%.1f", elapsed))s n=\(n) rate=\(String(format: "%.2f", slope*60))px/min(actual) RA=\(String(format: "%.2f", raRate))px/min t統計量=\(String(format: "%.2f", tStat)) 有意=\(isSignificant)"
         )
@@ -188,7 +190,7 @@ final class DriftMeasureViewModel {
         currentPhase.wrappedValue = next
         calibration.wrappedValue = nil
         driftTracker.calibration = nil
-        driftTracker.resetHistory()
+        slopeHistory = []
         Task {
             try? await Task.sleep(for: .seconds(3))
             step.wrappedValue = .phaseGuide(next)

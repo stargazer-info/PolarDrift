@@ -1,7 +1,6 @@
 import SwiftUI
 import AVFoundation
 
-#if os(iOS)
 struct CameraPreviewView: UIViewRepresentable {
     let previewLayer: AVCaptureVideoPreviewLayer?
 
@@ -34,4 +33,3 @@ struct CameraPreviewView: UIViewRepresentable {
         }
     }
 }
-#endif

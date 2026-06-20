@@ -36,7 +36,7 @@ final class SessionViewModel<Speech: SpeechManaging> {
     var measureISO: Float = 800 { didSet { applyCurrentExposure() } }
     var calibExposureSec: Double = 1.0 / 30 { didSet { applyCurrentExposure() } }
     var calibISO: Float = 1600 { didSet { applyCurrentExposure() } }
-    var minContrast: Float = 0.25 {
+    var minContrast: Float = 0.15 {
         didSet {
             calibrationVM.frameProcessor.minContrast  = minContrast
             driftMeasureVM.frameProcessor.minContrast = minContrast

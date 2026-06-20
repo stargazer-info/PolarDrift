@@ -13,10 +13,8 @@ struct SessionView: View {
         @Bindable var session = viewModel
 
         ZStack {
-            #if os(iOS)
             CameraPreviewView(previewLayer: session.previewLayer)
                 .ignoresSafeArea()
-            #endif
 
             if needsDimOverlay {
                 Color.astronomyBackground.opacity(0.85)
