@@ -1,4 +1,5 @@
 import Foundation
+import CoreGraphics
 
 final class SessionRecorder {
 
@@ -73,18 +74,16 @@ final class SessionRecorder {
         append(line + "\n", to: summaryURL)
     }
 
-    func recordRawFrames(iteration: Int, tracker: DriftTracker) {
-        let w = tracker.imageSize.width  > 0 ? Double(tracker.imageSize.width)  : 1280
-        let h = tracker.imageSize.height > 0 ? Double(tracker.imageSize.height) : 720
-        let wStr = String(format: "%.0f", w)
-        let hStr = String(format: "%.0f", h)
+    func recordRawFrames(iteration: Int, tracker: DriftTracker, imageSize: CGSize) {
+        let wStr = String(format: "%.0f", imageSize.width)
+        let hStr = String(format: "%.0f", imageSize.height)
         let iterStr = String(iteration)
         let lines: [String] = tracker.rawFrames.map { frame in
-            let xPx       = String(format: "%.3f", frame.x       * w)
-            let yPx       = String(format: "%.3f", frame.y       * h)
-            let decPx     = String(format: "%.3f", frame.decDisp)   // 既に px
-            let raPx      = String(format: "%.3f", frame.raDisp)    // 既に px
-            let elapsed   = String(format: "%.6f", frame.elapsed)
+            let xPx     = String(format: "%.3f", frame.x)        // 既に px
+            let yPx     = String(format: "%.3f", frame.y)        // 既に px
+            let decPx   = String(format: "%.3f", frame.decDisp)
+            let raPx    = String(format: "%.3f", frame.raDisp)
+            let elapsed = String(format: "%.6f", frame.elapsed)
             let fields: [String] = [
                 sessionId, currentPhase, iterStr,
                 elapsed, xPx, yPx, decPx, raPx, wStr, hStr

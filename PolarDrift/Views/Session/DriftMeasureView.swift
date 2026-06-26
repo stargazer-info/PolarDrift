@@ -21,7 +21,8 @@ struct DriftMeasureView: View {
                 isTracking: tracker.isTracking,
                 showCrosshair: showDriftCrosshair,
                 crosshairFollowsStar: crosshairFollowsStar,
-                previewLayer: previewLayer
+                previewLayer: previewLayer,
+                imageSize: vm.imageSize
             )
             .ignoresSafeArea()
 

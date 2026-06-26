@@ -12,6 +12,7 @@ final class DriftMeasureViewModel {
     var detectedCentroid: CGPoint?
     var frameProcessor = FrameProcessor()
     private(set) var slopeHistory: [(rate: Double, sePxPerMin: Double, iteration: Int)] = []
+    private(set) var imageSize: CGSize? = nil
 
     private var streamTask: Task<Void, Never>?
 
@@ -101,6 +102,7 @@ final class DriftMeasureViewModel {
         calibration: Binding<DecCalibration?>,
         currentPhase: Binding<AlignmentPhase>
     ) {
+        imageSize = CGSize(width: gray.width, height: gray.height)
         switch step.wrappedValue {
         case .driftMeasure(.reintroducing):
             if let last = detectedCentroid {
@@ -126,9 +128,6 @@ final class DriftMeasureViewModel {
         calibration: Binding<DecCalibration?>,
         currentPhase: Binding<AlignmentPhase>
     ) {
-        if driftTracker.imageSize == .zero {
-            driftTracker.imageSize = CGSize(width: gray.width, height: gray.height)
-        }
         guard let last = detectedCentroid ?? driftTracker.sessionOrigin else { return }
         if let pos = frameProcessor.trackCentroid(
             in: gray, lastPosition: last,

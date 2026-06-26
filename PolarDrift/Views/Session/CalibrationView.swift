@@ -20,7 +20,8 @@ struct CalibrationView: View {
                 isTracking: false,
                 showCrosshair: false,
                 crosshairFollowsStar: true,
-                previewLayer: previewLayer
+                previewLayer: previewLayer,
+                imageSize: vm.imageSize
             )
             .ignoresSafeArea()
 

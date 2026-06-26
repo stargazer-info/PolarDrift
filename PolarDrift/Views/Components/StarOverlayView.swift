@@ -3,25 +3,27 @@ import AVFoundation
 
 struct StarOverlayView: View {
     let detectedCentroid: CGPoint?
-    let sessionOrigin: CGPoint?          // 「スタート」瞬間の固定基準点（測定中）
+    let sessionOrigin: CGPoint?          // 「スタート」瞬間の固定基準点（測定中、px）
     let calibration: DecCalibration?
     let driftHistory: [CGPoint]
     let isTracking: Bool
     let showCrosshair: Bool              // false=非表示、true=表示（十字線）
     let crosshairFollowsStar: Bool       // true=星追随（キャリブ後）、false=固定（測定中）
     let previewLayer: AVCaptureVideoPreviewLayer?
+    let imageSize: CGSize?               // px → AVF normalized 変換源
 
     var body: some View {
         GeometryReader { geo in
             Canvas { ctx, size in
                 // 1. 十字線
-                if showCrosshair, let cal = calibration {
-                    let center: CGPoint
+                if showCrosshair, let cal = calibration, let imgSize = imageSize {
+                    let centerPx: CGPoint
                     if crosshairFollowsStar {
-                        center = denormalized(detectedCentroid ?? .init(x: 0.5, y: 0.5), size)
+                        centerPx = detectedCentroid ?? CGPoint(x: imgSize.width * 0.5, y: imgSize.height * 0.5)
                     } else {
-                        center = denormalized(sessionOrigin ?? .init(x: 0.5, y: 0.5), size)
+                        centerPx = sessionOrigin ?? CGPoint(x: imgSize.width * 0.5, y: imgSize.height * 0.5)
                     }
+                    let center = denormalized(centerPx, size)
                     let angles = cal.crosshairAngles()
                     drawLine(ctx: ctx, center: center, angle: angles.decAngle,
                              color: .decAxisColor, size: size)
@@ -57,11 +59,16 @@ struct StarOverlayView: View {
         .allowsHitTesting(false)
     }
 
-    private func denormalized(_ pt: CGPoint, _ size: CGSize) -> CGPoint {
-        if let layer = previewLayer {
-            return layer.layerPointConverted(fromCaptureDevicePoint: pt)
+    // px CGPoint → ビュー CGPoint（px → AVF normalized → layer point）
+    private func denormalized(_ ptPx: CGPoint, _ size: CGSize) -> CGPoint {
+        guard let imgSize = imageSize, imgSize.width > 0, imgSize.height > 0 else {
+            return ptPx
         }
-        return CGPoint(x: pt.x * size.width, y: pt.y * size.height)
+        let norm = CGPoint(x: ptPx.x / imgSize.width, y: ptPx.y / imgSize.height)
+        if let layer = previewLayer {
+            return layer.layerPointConverted(fromCaptureDevicePoint: norm)
+        }
+        return CGPoint(x: norm.x * size.width, y: norm.y * size.height)
     }
 
     private func drawLine(ctx: GraphicsContext, center: CGPoint,

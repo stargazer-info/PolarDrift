@@ -31,10 +31,9 @@ final class DriftTracker {
     }
 
     var calibration: DecCalibration?
-    var imageSize: CGSize = .zero
 
     var trackingState: StarTrackingState = .idle
-    var sessionOrigin: CGPoint?        // 測定「スタート」瞬間の位置（十字線固定点）
+    var sessionOrigin: CGPoint?        // 測定「スタート」瞬間の位置（px）
 
     private(set) var rawFrames: [(elapsed: Double, x: Double, y: Double, decDisp: Double, raDisp: Double)] = []
 
@@ -87,16 +86,14 @@ final class DriftTracker {
         guard isTracking, let startTime = trackingStartTime else { return }
         guard let cal = calibration, let origin = sessionOrigin else { return }
 
-        // 重心(正規化)を px に変換し、px変位を Dec軸・RA軸に投影
-        let w = imageSize.width  > 0 ? imageSize.width  : 1280
-        let h = imageSize.height > 0 ? imageSize.height : 720
-        let dispPx = CGVector(dx: (point.x - origin.x) * w, dy: (point.y - origin.y) * h)
+        // px変位を Dec軸・RA軸に投影
+        let dispPx = CGVector(dx: point.x - origin.x, dy: point.y - origin.y)
         let decDisp = cal.decComponent(of: dispPx)
         let raDisp = cal.raComponent(of: dispPx)
 
-        // 速度予測用に直近変位を記録（px 単位。trackCentroid が predictedVelocity を / w,h するため）
+        // 速度予測用に直近フレーム間変位を記録（px 単位）
         if case .tracking(let last) = trackingState {
-            let frameDisp = CGVector(dx: (point.x - last.x) * w, dy: (point.y - last.y) * h)
+            let frameDisp = CGVector(dx: point.x - last.x, dy: point.y - last.y)
             recentDisplacements.append((frameDisp, time))
             if recentDisplacements.count > 5 { recentDisplacements.removeFirst() }
         }
@@ -112,17 +109,17 @@ final class DriftTracker {
         if sec > lastLoggedSecond {
             lastLoggedSecond = sec
             slopeSamples.append((t: elapsedTime, ratePxPerMin: currentSlope * 60))
-            logSnapshot(sec: sec, point: point, w: w, h: h)
+            logSnapshot(sec: sec, point: point)
         }
     }
 
-    private func logSnapshot(sec: Int, point: CGPoint, w: CGFloat, h: CGFloat) {
+    private func logSnapshot(sec: Int, point: CGPoint) {
         let ratePx = currentSlope * 60
         let sePx   = slopeStdError * 60
         let raPx   = raSlope * 60
         let tStat  = slopeStdError > 0 ? currentSlope / slopeStdError : 0
         driftLogger.info(
-            "t=\(sec)s n=\(self.regression.n) pos=(\(String(format: "%.1f", point.x * w)),\(String(format: "%.1f", point.y * h)))px rate=\(String(format: "%.2f", ratePx))±\(String(format: "%.2f", sePx*3))px/min(3σ) RA=\(String(format: "%.2f", raPx))px/min t=\(String(format: "%.2f", tStat)) sig=\(self.isDriftSignificant) precise=\(self.isPrecise)"
+            "t=\(sec)s n=\(self.regression.n) pos=(\(String(format: "%.1f", point.x)),\(String(format: "%.1f", point.y)))px rate=\(String(format: "%.2f", ratePx))±\(String(format: "%.2f", sePx*3))px/min(3σ) RA=\(String(format: "%.2f", raPx))px/min t=\(String(format: "%.2f", tStat)) sig=\(self.isDriftSignificant) precise=\(self.isPrecise)"
         )
     }
 

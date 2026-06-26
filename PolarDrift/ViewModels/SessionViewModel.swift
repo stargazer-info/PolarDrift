@@ -109,7 +109,11 @@ final class SessionViewModel<Speech: SpeechManaging> {
             }
 
         case .driftMeasure(.showingResult(let iter)):
-            recorder.recordRawFrames(iteration: iter, tracker: driftMeasureVM.driftTracker)
+            recorder.recordRawFrames(
+                iteration: iter,
+                tracker: driftMeasureVM.driftTracker,
+                imageSize: driftMeasureVM.imageSize ?? CGSize(width: 1280, height: 720)
+            )
             recorder.recordMeasurement(
                 iteration: iter,
                 tracker: driftMeasureVM.driftTracker
