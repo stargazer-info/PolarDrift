@@ -10,7 +10,7 @@ enum CalibrationStep: Equatable {
 
 // MARK: - DriftMeasureStep
 
-enum DriftMeasureStep {
+enum DriftMeasureStep: Equatable {
     case reintroducing(iteration: Int)
     case measuring(iteration: Int)
     case showingResult(iteration: Int)
@@ -18,7 +18,7 @@ enum DriftMeasureStep {
 
 // MARK: - SessionStep
 
-enum SessionStep {
+enum SessionStep: Equatable {
     case phaseGuide(AlignmentPhase)
     case calibration(CalibrationStep)
     case driftMeasure(DriftMeasureStep)
@@ -75,3 +75,4 @@ extension SessionStep {
         }
     }
 }
+

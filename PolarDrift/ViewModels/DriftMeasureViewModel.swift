@@ -13,6 +13,7 @@ final class DriftMeasureViewModel {
     var frameProcessor = FrameProcessor()
     private(set) var slopeHistory: [(rate: Double, sePxPerMin: Double, iteration: Int)] = []
     private(set) var imageSize: CGSize? = nil
+    var currentMode: SessionMode = .driftCheck
 
     private var streamTask: Task<Void, Never>?
 
@@ -52,7 +53,11 @@ final class DriftMeasureViewModel {
             fixCrosshairAndStartMeasuring(at: origin, iteration: iter, step: step)
 
         case .showingResult(let iter):
-            step.wrappedValue = .driftMeasure(.reintroducing(iteration: iter + 1))
+            if currentMode == .periodCheck {
+                advancePhase(step: step, calibration: calibration, currentPhase: currentPhase)
+            } else {
+                step.wrappedValue = .driftMeasure(.reintroducing(iteration: iter + 1))
+            }
 
         default:
             break
@@ -181,6 +186,11 @@ final class DriftMeasureViewModel {
         calibration: Binding<DecCalibration?>,
         currentPhase: Binding<AlignmentPhase>
     ) {
+        // 周期確認モードはフェーズを持たないためセッション完了へ直行
+        if currentMode == .periodCheck {
+            step.wrappedValue = .sessionComplete
+            return
+        }
         guard let next = currentPhase.wrappedValue.next else {
             step.wrappedValue = .sessionComplete
             return

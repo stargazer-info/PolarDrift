@@ -1,0 +1,1 @@
+session_id,session_start,phase,cal_dec_axis_x,cal_dec_axis_y,iteration,duration_sec,sample_count,drift_rate_px_per_min,drift_rate_se_2sigma,t_statistic,is_significant,feedback

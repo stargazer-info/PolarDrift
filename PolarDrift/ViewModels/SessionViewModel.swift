@@ -43,13 +43,8 @@ final class SessionViewModel<Speech: SpeechManaging> {
         }
     }
 
-    // 周期確認モード（デバッグ専用）。UI露出は #if DEBUG だが、プロパティ自体は全ビルドに置く。
-    var diagnosticMode: Bool = false {
-        didSet { driftMeasureVM.driftTracker.diagnosticMode = diagnosticMode }
-    }
-    var diagnosticDurationMin: Int = 20 {
-        didSet { driftMeasureVM.driftTracker.diagnosticDuration = TimeInterval(diagnosticDurationMin * 60) }
-    }
+    // セッションモード（モード選択画面で確定、セッション中は固定）
+    private(set) var currentMode: SessionMode = .driftCheck
 
     // MARK: - 子VM
     let calibrationVM  = CalibrationViewModel()
@@ -96,8 +91,17 @@ final class SessionViewModel<Speech: SpeechManaging> {
     func startSession() {
         currentPhase = .azimuth
         calibration = nil
+        currentMode = .driftCheck
         recorder.startSession()
-        step = .phaseGuide(.azimuth)   // didSet が startListening() を呼ぶ
+        step = .phaseGuide(.azimuth)
+    }
+
+    func selectMode(_ mode: SessionMode) {
+        currentMode = mode
+        driftMeasureVM.currentMode = mode
+        driftMeasureVM.driftTracker.diagnosticMode = (mode == .periodCheck)
+        driftMeasureVM.driftTracker.diagnosticDuration = 1200
+        step = .phaseGuide(.azimuth)
     }
 
     private func handleStepTransition(from old: SessionStep, to new: SessionStep) {
@@ -105,7 +109,7 @@ final class SessionViewModel<Speech: SpeechManaging> {
         case .driftMeasure(.reintroducing(1)):
             // キャリブレーション完了直後 → キャリブレーション情報を記録
             if case .calibration = old {
-                recorder.recordCalibration(calibration, phase: currentPhase)
+                recorder.recordCalibration(calibration, phase: currentPhase, mode: currentMode)
             }
 
         case .driftMeasure(.showingResult(let iter)):
@@ -190,9 +194,6 @@ final class SessionViewModel<Speech: SpeechManaging> {
 
     func startDriftStream() {
         @Bindable var this = self
-        // 周期確認モード設定をストリーム開始前に明示適用（didSet未発火・トグル順序対策）
-        driftMeasureVM.driftTracker.diagnosticMode = diagnosticMode
-        driftMeasureVM.driftTracker.diagnosticDuration = TimeInterval(diagnosticDurationMin * 60)
         let (sec, iso) = exposureSettings(for: .driftMeasure(.reintroducing(iteration: 1)))
         Task { @CameraActor in
             self.cameraManager.setExposure(seconds: sec, iso: iso)   // 計測露光（長秒・低ISO）

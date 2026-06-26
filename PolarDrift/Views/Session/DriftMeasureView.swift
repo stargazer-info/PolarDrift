@@ -3,6 +3,7 @@ import AVFoundation
 
 struct DriftMeasureView: View {
     let vm: DriftMeasureViewModel
+    let mode: SessionMode
     @Binding var step: SessionStep
     @Binding var currentPhase: AlignmentPhase
     @Binding var calibration: DecCalibration?
@@ -71,15 +72,24 @@ struct DriftMeasureView: View {
 
     private var phaseHeader: some View {
         HStack {
-            let color = currentPhase == .azimuth ? Color.phaseAzimuth : Color.phaseAltitude
-            Text(currentPhase.displayName)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(color)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 4)
-                .background(color.opacity(0.2), in: Capsule())
+            if mode == .periodCheck {
+                Text("周期確認")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.orange)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 4)
+                    .background(Color.orange.opacity(0.2), in: Capsule())
+            } else {
+                let color = currentPhase == .azimuth ? Color.phaseAzimuth : Color.phaseAltitude
+                Text(currentPhase.displayName)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(color)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 4)
+                    .background(color.opacity(0.2), in: Capsule())
+            }
             Spacer()
-            if let n = iterationNumber {
+            if mode != .periodCheck, let n = iterationNumber {
                 Text("測定 \(n) 回目")
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.6))
@@ -131,13 +141,11 @@ struct DriftMeasureView: View {
     }
 
     private var stabilityStatus: String {
-        #if DEBUG
-        if tracker.diagnosticMode {
+        if mode == .periodCheck {
             let e = Int(tracker.elapsedTime)
             let capMin = Int((tracker.diagnosticDuration / 60).rounded())
             return String(format: "周期確認モード 経過 %d:%02d ／ 上限 %d分", e / 60, e % 60, capMin)
         }
-        #endif
         let remaining = tracker.minMeasureDuration - tracker.elapsedTime
         if remaining > 0 {
             return String(format: "安定化待ち 残り%.0f秒", remaining)
@@ -156,8 +164,7 @@ struct DriftMeasureView: View {
 
             case .driftMeasure(.measuring):
                 instructionText("望遠鏡を動かさないでください")
-                #if DEBUG
-                if tracker.diagnosticMode {
+                if mode == .periodCheck {
                     Button("計測停止") {
                         vm.stopMeasurementManually(
                             step: $step,
@@ -168,7 +175,6 @@ struct DriftMeasureView: View {
                     .buttonStyle(.borderedProminent)
                     .tint(.orange)
                 }
-                #endif
                 VoiceStatusBadge(isListening: isListening,
                                  expectedCommand: nil)
 

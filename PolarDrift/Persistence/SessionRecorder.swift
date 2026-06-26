@@ -50,8 +50,8 @@ final class SessionRecorder {
         }
     }
 
-    func recordCalibration(_ cal: DecCalibration?, phase: AlignmentPhase) {
-        currentPhase = phase.rawValue
+    func recordCalibration(_ cal: DecCalibration?, phase: AlignmentPhase, mode: SessionMode) {
+        currentPhase = mode == .periodCheck ? "period_check" : phase.rawValue
         calDecAxisX = Double(cal?.decAxisVector.dx ?? 0)
         calDecAxisY = Double(cal?.decAxisVector.dy ?? 0)
     }
