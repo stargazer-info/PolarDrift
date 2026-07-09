@@ -92,7 +92,6 @@ final class SessionViewModel<Speech: SpeechManaging> {
         currentPhase = .azimuth
         calibration = nil
         currentMode = .driftCheck
-        recorder.startSession()
         step = .phaseGuide(.azimuth)
     }
 
@@ -101,6 +100,7 @@ final class SessionViewModel<Speech: SpeechManaging> {
         driftMeasureVM.currentMode = mode
         driftMeasureVM.driftTracker.diagnosticMode = (mode == .periodCheck)
         driftMeasureVM.driftTracker.diagnosticDuration = 1200
+        recorder.startSession(mode: mode)
         step = .phaseGuide(.azimuth)
     }
 

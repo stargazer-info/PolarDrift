@@ -14,7 +14,8 @@ final class SessionRecorder {
         "t_statistic,is_significant"
 
     private static let rawHeader =
-        "session_id,phase,iteration,elapsed_sec," +
+        "session_id,phase,cal_dec_axis_x,cal_dec_axis_y," +
+        "iteration,elapsed_sec," +
         "x_px,y_px,dec_disp_px,ra_disp_px,image_width,image_height"
 
     // MARK: - 状態
@@ -29,7 +30,7 @@ final class SessionRecorder {
 
     // MARK: - API
 
-    func startSession() {
+    func startSession(mode: SessionMode) {
         sessionId = UUID().uuidString
         let iso = ISO8601DateFormatter()
         sessionStart = iso.string(from: Date())
@@ -39,8 +40,9 @@ final class SessionRecorder {
         let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         let f = DateFormatter(); f.dateFormat = "yyyyMMdd_HHmmss"
         let ts = f.string(from: Date())
-        summaryURL = docs.appendingPathComponent("polardrift_\(ts).csv")
-        rawURL     = docs.appendingPathComponent("polardrift_raw_\(ts).csv")
+        let slug = mode.fileSlug
+        summaryURL = docs.appendingPathComponent("polardrift_\(slug)_\(ts).csv")
+        rawURL     = docs.appendingPathComponent("polardrift_raw_\(slug)_\(ts).csv")
 
         // ヘッダー行を即時書き込み（ファイルを作成）
         append(Self.header + "\n", to: summaryURL)
@@ -78,6 +80,8 @@ final class SessionRecorder {
         let wStr = String(format: "%.0f", imageSize.width)
         let hStr = String(format: "%.0f", imageSize.height)
         let iterStr = String(iteration)
+        let calXStr = String(calDecAxisX)
+        let calYStr = String(calDecAxisY)
         let lines: [String] = tracker.rawFrames.map { frame in
             let xPx     = String(format: "%.3f", frame.x)        // 既に px
             let yPx     = String(format: "%.3f", frame.y)        // 既に px
@@ -85,7 +89,7 @@ final class SessionRecorder {
             let raPx    = String(format: "%.3f", frame.raDisp)
             let elapsed = String(format: "%.6f", frame.elapsed)
             let fields: [String] = [
-                sessionId, currentPhase, iterStr,
+                sessionId, currentPhase, calXStr, calYStr, iterStr,
                 elapsed, xPx, yPx, decPx, raPx, wStr, hStr
             ]
             return fields.joined(separator: ",")
