@@ -11,7 +11,7 @@ import SwiftUI
 struct PolarDriftApp: App {
     var body: some Scene {
         WindowGroup {
-            SessionView()
+            RootView()
                 .preferredColorScheme(.dark)
                 .task { UIApplication.shared.isIdleTimerDisabled = true }
         }
