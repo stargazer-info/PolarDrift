@@ -25,9 +25,12 @@ struct RootView: View {
         .onChange(of: shouldStartNewSession) { _, newValue in
             if newValue {
                 isSessionActive = false
-                viewModel.startSession()
                 shouldStartNewSession = false
             }
+        }
+        .onChange(of: isSessionActive) { _, newValue in
+            // ナビの戻る／完了ボタン等で pop したときにセッション状態を初期化する
+            if !newValue { viewModel.startSession() }
         }
     }
 }

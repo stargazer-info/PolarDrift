@@ -80,10 +80,10 @@ struct SessionView: View {
                 .ignoresSafeArea(.keyboard)
             }
         }
-        // phaseGuide(.azimuth) のみ戻るボタン+タイトルを表示、以降は非表示
+        // 計測中と Dec 軸キャリブ中はモード選択に戻れないよう戻るボタン+ナビバーを隠す
         .navigationTitle(modeTitle)
-        .navigationBarBackButtonHidden(session.step != .phaseGuide(.azimuth))
-        .navigationBarHidden(session.step != .phaseGuide(.azimuth))
+        .navigationBarBackButtonHidden(!canReturnToModeSelection)
+        .navigationBarHidden(!canReturnToModeSelection)
         .onChange(of: viewModel.speech.commandCount) {
             viewModel.handleVoiceCommand(viewModel.speech.lastCommand)
         }
@@ -104,6 +104,15 @@ struct SessionView: View {
         switch viewModel.step {
         case .calibration, .driftMeasure, .phaseGuide: return false
         default: return true
+        }
+    }
+
+    private var canReturnToModeSelection: Bool {
+        switch viewModel.step {
+        case .driftMeasure(.measuring), .calibration(.awaitingDecMove):
+            return false
+        default:
+            return true
         }
     }
 
