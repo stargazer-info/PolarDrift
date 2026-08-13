@@ -10,12 +10,15 @@ final class CameraManager: NSObject {
 
     func setup() {
         let session = AVCaptureSession()
-        session.sessionPreset = .hd1280x720
 
         guard let cam = makeCamera(),
               let input = try? AVCaptureDeviceInput(device: cam) else { return }
-
         camera = cam
+
+        // トポロジ変更（preset / input / output / connection 設定）は
+        // beginConfiguration ... commitConfiguration でバッチ化してアトミックに適用する。
+        session.beginConfiguration()
+        session.sessionPreset = .hd1280x720
         if session.canAddInput(input) { session.addInput(input) }
 
         let output = AVCaptureVideoDataOutput()
@@ -28,6 +31,7 @@ final class CameraManager: NSObject {
         if let conn = output.connection(with: .video), conn.isVideoStabilizationSupported {
             conn.preferredVideoStabilizationMode = .off
         }
+        session.commitConfiguration()
 
         let layer = AVCaptureVideoPreviewLayer(session: session)
         layer.videoGravity = .resizeAspectFill
