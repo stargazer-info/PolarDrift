@@ -141,11 +141,7 @@ final class SessionViewModel<Speech: SpeechManaging> {
     }
 
     private func handleSkip() {
-        guard case .driftMeasure(.showingResult(let iter)) = step else { return }
-        recorder.recordMeasurement(
-            iteration: iter,
-            tracker: driftMeasureVM.driftTracker
-        )
+        guard case .driftMeasure(.showingResult) = step else { return }
         @Bindable var this = self
         driftMeasureVM.forceCompletePhase(
             step: $this.step,
