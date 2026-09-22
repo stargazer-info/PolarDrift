@@ -89,6 +89,8 @@ final class SessionViewModel<Speech: SpeechManaging> {
     }
 
     func startSession() {
+        driftMeasureVM.reset()
+        calibrationVM.reset()
         currentPhase = .azimuth
         calibration = nil
         currentMode = .driftCheck

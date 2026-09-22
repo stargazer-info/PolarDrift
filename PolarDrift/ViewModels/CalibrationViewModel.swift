@@ -44,6 +44,18 @@ final class CalibrationViewModel {
         streamTask = nil
     }
 
+    func reset() {
+        stopStream()
+        cancelDetectionTimeout()
+        detectionFailed = false
+        detectedCentroid = nil
+        imageSize = nil
+        calibrationOrigin = nil
+        calibLastPos = nil
+        calibPrevPos = nil
+        calPath = []
+    }
+
     // MARK: - 音声コマンド処理
 
     func handleVoiceCommand(

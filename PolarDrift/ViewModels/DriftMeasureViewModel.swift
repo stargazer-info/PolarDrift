@@ -39,6 +39,14 @@ final class DriftMeasureViewModel {
         streamTask = nil
     }
 
+    func reset() {
+        stopStream()
+        driftTracker.reset()
+        detectedCentroid = nil
+        slopeHistory = []
+        imageSize = nil
+    }
+
     // MARK: - 音声コマンド処理
 
     func handleVoiceCommand(

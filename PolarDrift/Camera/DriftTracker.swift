@@ -82,6 +82,21 @@ final class DriftTracker {
         return currentSlope
     }
 
+    func reset() {
+        regression.reset()
+        raRegression.reset()
+        isTracking = false
+        trackingStartTime = nil
+        sessionOrigin = nil
+        lastLoggedSecond = -1
+        lastGoodFrameTime = nil
+        rawFrames = []
+        slopeSamples = []
+        recentDisplacements = []
+        trackingState = .idle
+        calibration = nil
+    }
+
     func addCentroid(_ point: CGPoint, at time: Date) {
         guard isTracking, let startTime = trackingStartTime else { return }
         guard let cal = calibration, let origin = sessionOrigin else { return }
