@@ -55,6 +55,8 @@ final class DriftMeasureViewModel {
         case .showingResult(let iter):
             if currentMode == .periodCheck {
                 advancePhase(step: step, calibration: calibration, currentPhase: currentPhase)
+            } else if let origin = detectedCentroid {
+                fixCrosshairAndStartMeasuring(at: origin, iteration: iter + 1, step: step)
             } else {
                 step.wrappedValue = .driftMeasure(.reintroducing(iteration: iter + 1))
             }
@@ -109,7 +111,7 @@ final class DriftMeasureViewModel {
     ) {
         imageSize = CGSize(width: gray.width, height: gray.height)
         switch step.wrappedValue {
-        case .driftMeasure(.reintroducing):
+        case .driftMeasure(.reintroducing), .driftMeasure(.showingResult):
             if let last = detectedCentroid {
                 detectedCentroid = frameProcessor.trackCentroid(
                     in: gray, lastPosition: last,
